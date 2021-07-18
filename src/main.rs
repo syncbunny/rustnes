@@ -1,6 +1,7 @@
 extern crate memmap;
 
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::fs::File;
 use std::env;
 use std::error::Error;
@@ -29,9 +30,18 @@ struct MMU {
 }
 
 impl MMU {
-	fn read16(addr:u16) -> u16{
-		// TODO
-		return 0x0000;
+	fn read_2bytes(&mut self, addr:u16) -> u16{
+		// TODO: address mapping
+
+		let mut ret:u16 = 0;
+
+		if addr >= 0x8000 {
+			ret = self.prom[(addr - 0x8000) as usize] as u16;	
+			ret |= (self.prom[(addr - 0x8000 + 1) as usize] as u16) << 8;
+		}
+
+		println!("read_2bytes({:x}) -> {:x}", addr, ret);
+		return ret;
 	}
 
 	fn set_mapper(&mut self, m: u8) {
@@ -57,16 +67,25 @@ struct CPU {
 
 	clock_remain: u32,
 	reset_flag: bool,
+
+	mmu: Rc<RefCell<MMU>>,
 }
 
 impl CPU {
 	fn clock(&mut self) {
-		if (self.reset_flag) {
+		if self.reset_flag {
 			self.do_reset();
+		}
+
+		if self.clock_remain > 0 {
+			self.clock_remain -= 1;
+			return;
 		}
 	}
 
 	fn reset(&mut self) {
+		let mut mmu = self.mmu.borrow_mut();
+		self.pc = mmu.read_2bytes(RESET_VECTOR);
 		self.reset_flag = true;
 		self.clock_remain = 0;
 	}
@@ -78,8 +97,8 @@ impl CPU {
 }
 
 struct NES {
-	cpu: RefCell<CPU>,
-	mmu: RefCell<MMU>
+	cpu: Rc<RefCell<CPU>>,
+	mmu: Rc<RefCell<MMU>>
 }
 
 impl NES {
@@ -96,10 +115,10 @@ impl NES {
 		};
 
 		// check header
-		if (cartridge[0] != 0x4E) { panic!("not nes cartridge"); }
-		if (cartridge[1] != 0x45) { panic!("not nes cartridge"); }
-		if (cartridge[2] != 0x53) { panic!("not nes cartridge"); }
-		if (cartridge[3] != 0x1A) { panic!("not nes cartridge"); }
+		if cartridge[0] != 0x4E { panic!("not nes cartridge"); }
+		if cartridge[1] != 0x45 { panic!("not nes cartridge"); }
+		if cartridge[2] != 0x53 { panic!("not nes cartridge"); }
+		if cartridge[3] != 0x1A { panic!("not nes cartridge"); }
 
 		let offset: usize = if ((cartridge[5] & FLAG6_HAS_TRAINER) == 0) { 16 } else { 16 + 512 };
 
@@ -136,21 +155,22 @@ impl NES {
 fn main() {
 	let args:Vec<String> = env::args().collect();
 
-	let mut mmu = RefCell::new(MMU{
+	let mmu = Rc::new(RefCell::new(MMU {
 		mapper: 0,
 		wram: vec![0; 0x0800],
 		prom: Vec::new(),
 		crom: Vec::new()
-	});
-	let mut cpu = RefCell::new(CPU{
+	}));
+	let cpu = Rc::new(RefCell::new(CPU{
 		a: 0,
 		pc: 0,
 		clock_remain: 0,
 		reset_flag: false,
-	});
-	let mut nes = NES{
-		cpu: cpu,
-		mmu: mmu
+		mmu: Rc::clone(&mmu)
+	}));
+	let nes:NES = NES{
+		cpu: Rc::clone(&cpu),
+		mmu: Rc::clone(&mmu)
 	};
 
 	nes.load_cartridge(&args[1]);
