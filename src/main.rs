@@ -7,14 +7,10 @@ mod nes;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::env;
-use std::error::Error;
 
 use crate::cpu::*;
 use crate::mmu::*;
 use crate::nes::*;
-
-// CPU Const
-const RESET_VECTOR: u16 = 0xFFFC;
 
 fn main() {
 	let args:Vec<String> = env::args().collect();

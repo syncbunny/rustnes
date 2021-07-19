@@ -3,7 +3,6 @@ extern crate memmap;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::fs::File;
-use std::error::Error;
 use memmap::Mmap;
 
 use crate::cpu::*;
@@ -36,12 +35,12 @@ impl NES {
 
 	pub fn load_cartridge(&self, path:&str) {
 		let file = match File::open(path) {
-			Err(e) => panic!("cannot open {}: {}", path, e.description()),
+			Err(e) => panic!("cannot open {}: {}", path, e.to_string()),
 			Ok(f) => f,
 		};
 
 		let cartridge = match unsafe { Mmap::map(&file)} {
-			Err(e) => panic!("mmap failed.: {}", e.description()),
+			Err(e) => panic!("mmap failed.: {}", e.to_string()),
 			Ok(m) => m,
 		};
 
@@ -51,7 +50,7 @@ impl NES {
 		if cartridge[2] != 0x53 { panic!("not nes cartridge"); }
 		if cartridge[3] != 0x1A { panic!("not nes cartridge"); }
 
-		let offset: usize = if ((cartridge[5] & FLAG6_HAS_TRAINER) == 0) { 16 } else { 16 + 512 };
+		let offset: usize = if (cartridge[5] & FLAG6_HAS_TRAINER) == 0 { 16 } else { 16 + 512 };
 
 		// PROM size & CROM_SIZE
 		let prom_size: usize; // [16k]
