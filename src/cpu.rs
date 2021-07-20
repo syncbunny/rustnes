@@ -36,6 +36,18 @@ impl CPU {
 			self.clock_remain -= 1;
 			return;
 		}
+
+		let mut mmu = self.mmu.borrow_mut();
+
+		// read opcode
+		let op:u8 = mmu.read_1byte(self.pc);
+		self.pc += 1;
+
+		match op {
+			_ => {
+				panic!("unsupported opcode:{:x}", op);
+			}
+		}
 	}
 	
 	pub fn reset(&mut self) {
@@ -46,6 +58,7 @@ impl CPU {
 	}
 	
 	fn do_reset(&mut self) {
+		println!("cpu:reset");
 		self.reset_flag = false;
 		self.clock_remain = 6;
 	}

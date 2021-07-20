@@ -15,6 +15,23 @@ impl MMU {
 		}
 	}
 
+	pub fn read_1byte(&mut self, addr:u16) -> u8 {
+		// TODO: address mapping
+
+		let mut ret:u8 = 0;
+
+		match addr {
+			0x8000 ..= 0xFFFF => {
+				ret = self.prom[(addr - 0x8000) as usize];	
+			}
+			_ => {
+				panic!("unmapped address: {:x}", addr);
+			}
+		}
+
+		return ret;
+	}
+
 	pub fn read_2bytes(&mut self, addr:u16) -> u16{
 		// TODO: address mapping
 
