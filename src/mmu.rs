@@ -29,6 +29,7 @@ impl MMU {
 			}
 		}
 
+		println!("read_1byte({:x}) -> {:x}", addr, ret);
 		return ret;
 	}
 
