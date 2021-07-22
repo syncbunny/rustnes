@@ -7,6 +7,7 @@ use memmap::Mmap;
 
 use crate::cpu::*;
 use crate::mmu::*;
+use crate::ppu::*;
 
 // NES Const
 const FLAG6_V_MIRROR: u8           = 0x01;
@@ -22,14 +23,16 @@ const FLAG7_MAPPER_HIGH: u8        = 0xF0;
 
 pub struct NES {
 	cpu: Rc<RefCell<CPU>>,
-	mmu: Rc<RefCell<MMU>>
+	mmu: Rc<RefCell<MMU>>,
+	ppu: Rc<RefCell<PPU>>
 }
 
 impl NES {
-	pub fn new(cpu: Rc<RefCell<CPU>>, mmu: Rc<RefCell<MMU>>) -> NES {
+	pub fn new(cpu: Rc<RefCell<CPU>>, mmu: Rc<RefCell<MMU>>, ppu: Rc<RefCell<PPU>>) -> NES {
 		NES {
 			cpu: cpu,
-			mmu: mmu
+			mmu: mmu,
+			ppu: ppu
 		}
 	}
 
@@ -78,6 +81,8 @@ impl NES {
 
 	pub fn reset(&self) {
 		let mut cpu = self.cpu.borrow_mut();
+		let mut ppu = self.ppu.borrow_mut();
 		cpu.reset();
+		ppu.reset();
 	}
 }
