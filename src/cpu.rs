@@ -13,7 +13,7 @@ const opcode_size: [u16;256] = [
 /* 50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 /* 60 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 /* 70 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 80 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 80 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0,
 /* 90 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 /* A0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
 /* B0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -59,11 +59,20 @@ impl CPU {
 
 		// Addressing modes
 		macro_rules! IMM { () => { self.pc } }
+		macro_rules! ABS { () => {
+			mmu.read_2bytes(self.pc)
+		}}
 
 		// Oprands
 		macro_rules! LDA {
 			($ea:expr) => {
 				self.a = mmu.read_1byte($ea);
+			}
+		}
+		macro_rules! STA {
+			($ea: expr) => {
+				let ea = $ea;
+				mmu.write(ea, self.a);
 			}
 		}
 
@@ -72,6 +81,9 @@ impl CPU {
 		self.pc += 1;
 
 		match op {
+			0x8D => { // STA Absolute
+				STA!( ABS!() );
+			}
 			0xA9 => { // LDA Immediate
 				LDA!( IMM!() );
 			}
@@ -83,7 +95,7 @@ impl CPU {
 	}
 	
 	pub fn reset(&mut self) {
-		let mut mmu = self.mmu.borrow_mut();
+		let mmu = self.mmu.borrow();
 		self.pc = mmu.read_2bytes(RESET_VECTOR);
 		self.reset_flag = true;
 		self.clock_remain = 0;

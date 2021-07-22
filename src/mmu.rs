@@ -15,17 +15,17 @@ impl MMU {
 		}
 	}
 
-	pub fn read_1byte(&mut self, addr:u16) -> u8 {
+	pub fn read_1byte(&self, addr:u16) -> u8 {
 		// TODO: address mapping
 
-		let mut ret:u8 = 0;
+		let mut ret:u8;
 
 		match addr {
 			0x8000 ..= 0xFFFF => {
 				ret = self.prom[(addr - 0x8000) as usize];	
 			}
 			_ => {
-				panic!("unmapped address: {:x}", addr);
+				panic!("mmu.read_1byte: unmapped address: {:x}", addr);
 			}
 		}
 
@@ -33,7 +33,7 @@ impl MMU {
 		return ret;
 	}
 
-	pub fn read_2bytes(&mut self, addr:u16) -> u16{
+	pub fn read_2bytes(&self, addr:u16) -> u16{
 		// TODO: address mapping
 
 		let mut ret:u16 = 0;
@@ -45,6 +45,19 @@ impl MMU {
 
 		println!("read_2bytes({:x}) -> {:x}", addr, ret);
 		return ret;
+	}
+
+	pub fn write(&mut self, addr:u16, n:u8) {
+		// TODO: address mapping
+
+		match addr {
+			0x0000 ..= 0x07FF => {
+				self.wram[addr as usize] = n;
+			}
+			_ => {
+				panic!("mmi.write: unmapped address: {:x}", addr);
+			}
+		}
 	}
 
 	pub fn set_mapper(&mut self, m: u8) {
