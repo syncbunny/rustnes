@@ -73,6 +73,11 @@ impl MMU {
 		}
 	}
 
+	pub fn push_2bytes(&mut self, addr:u16, n:u16) {
+		self.write(addr -0, (n >> 8) as u8);
+		self.write(addr -1, (n & 0x00FF) as u8);
+	}
+
 	pub fn set_mapper(&mut self, m: u8) {
 		self.mapper = m;
 		println!("prom.mapper={}", self.mapper);

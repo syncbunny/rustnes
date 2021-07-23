@@ -46,6 +46,8 @@ const clock_table: [u8;256] = [
 pub struct CPU {
 	a: u8,
 
+	sp: u8,
+
 	pc: u16,
 
 	clock_remain: u32,
@@ -58,6 +60,7 @@ impl CPU {
 	pub fn new(mmu: Rc<RefCell<MMU>>) -> CPU {
 		CPU {
 			a: 0,
+			sp: 0xFD,
 			pc: 0,
 			clock_remain: 0,
 			reset_flag: false,
@@ -78,12 +81,28 @@ impl CPU {
 		let mut mmu = self.mmu.borrow_mut();
 
 		// Addressing modes
-		macro_rules! IMM { () => { self.pc } }
-		macro_rules! ABS { () => {
-			mmu.read_2bytes(self.pc)
-		}}
+		let mut ea: u16;
+		macro_rules! IMM { 
+			($ea: expr, $pc: expr) => {
+				$ea = self.pc;
+				$pc = self.pc +1
+			}
+		}
+		macro_rules! ABS {
+			($ea: expr, $pc: expr) => {
+				$ea = mmu.read_2bytes(self.pc);
+				$pc = self.pc + 2;
+			}
+		}
 
 		// Oprands
+		macro_rules! JSR {
+			($ea:expr) => {
+				mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
+				self.sp -= 2;
+				self.pc = $ea;
+			}
+		}
 		macro_rules! LDA {
 			($ea:expr) => {
 				self.a = mmu.read_1byte($ea);
@@ -91,8 +110,7 @@ impl CPU {
 		}
 		macro_rules! STA {
 			($ea: expr) => {
-				let ea = $ea;
-				mmu.write(ea, self.a);
+				mmu.write($ea, self.a);
 			}
 		}
 
@@ -101,17 +119,22 @@ impl CPU {
 		self.pc += 1;
 
 		match op {
+			0x20 => { // JSR Absolute
+				ABS!(ea, self.pc);
+				JSR!(ea);
+			}
 			0x8D => { // STA Absolute
-				STA!( ABS!() );
+				ABS!(ea, self.pc);
+				STA!(ea);
 			}
 			0xA9 => { // LDA Immediate
-				LDA!( IMM!() );
+				IMM!(ea, self.pc);
+				LDA!(ea);
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
 			}
 		}
-		self.pc += opcode_size[op as usize];
 		self.clock_remain = clock_table[op as usize].into();
 	}
 	
