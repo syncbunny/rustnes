@@ -2,6 +2,44 @@ use std::cell::RefCell; use std::rc::Rc;
 use crate::mmu::*;
 
 const RESET_VECTOR: u16 = 0xFFFC;
+const FLG_C: u8 =  0x01;
+const FLG_Z: u8 =  0x02;
+const FLG_I: u8 =  0x04;
+const FLG_D: u8 =  0x08;
+const FLG_B: u8 =  0x10;
+const FLG_5: u8 =  0x20;
+const FLG_V: u8 =  0x40;
+const FLG_N: u8 =  0x80;
+const IFLG_C: u8 =  0xFE;
+const IFLG_Z: u8 =  0xFD;
+const IFLG_I: u8 =  0xFB;
+const IFLG_D: u8 =  0xF7;
+const IFLG_B: u8 =  0xEF;
+const IFLG_V: u8 =  0xBF;
+const IFLG_N: u8 =  0x7F;
+const IFLG_NZ: u8 =  0x7D;
+const IFLG_VC: u8 =  0xBE;
+
+macro_rules! SET_C { ($p:expr) =>{ $p |= FLG_C}}
+macro_rules! SET_Z { ($p:expr) =>{ $p |= FLG_Z}}
+macro_rules! SET_I { ($p:expr) =>{ $p |= FLG_I}}
+macro_rules! SET_D { ($p:expr) =>{ $p |= FLG_D}}
+macro_rules! SET_B { ($p:expr) =>{ $p |= FLG_B}}
+macro_rules! SET_5 { ($p:expr) =>{ $p |= FLG_5}}
+macro_rules! SET_V { ($p:expr) =>{ $p |= FLG_V}}
+macro_rules! SET_N { ($p:expr) =>{ $p |= FLG_N}}
+macro_rules! UNSET_C { ($p:expr) =>{ $p &= IFLG_C}}
+macro_rules! UNSET_Z { ($p:expr) =>{ $p &= IFLG_Z}}
+macro_rules! UNSET_I { ($p:expr) =>{ $p &= IFLG_I}}
+macro_rules! UNSET_D { ($p:expr) =>{ $p &= IFLG_D}}
+macro_rules! UNSET_B { ($p:expr) =>{ $p &= IFLG_B}}
+macro_rules! UNSET_5 { ($p:expr) =>{ $p &= IFLG_5}}
+macro_rules! UNSET_V { ($p:expr) =>{ $p &= IFLG_V}}
+macro_rules! UNSET_N { ($p:expr) =>{ $p &= IFLG_N}}
+
+macro_rules! UPDATE_Z { ($x: expr, $p: expr) => { if $x == 0 {SET_Z!($p)} else {UNSET_Z!($p)} } }
+macro_rules! UPDATE_N { ($x: expr, $p: expr) => { if ($x&0x80) !=  0 {SET_N!($p)} else {UNSET_N!($p)} } }
+macro_rules! UPDATE_NZ { ($x: expr, $p: expr) => { UPDATE_N!($x, $p); UPDATE_Z!($x, $p); } }
 
 const opcode_size: [u16;256] = [
 //       0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -47,6 +85,7 @@ pub struct CPU {
 	a: u8,
 
 	sp: u8,
+	p: u8,
 
 	pc: u16,
 
@@ -61,6 +100,7 @@ impl CPU {
 		CPU {
 			a: 0,
 			sp: 0xFD,
+			p:0,
 			pc: 0,
 			clock_remain: 0,
 			reset_flag: false,
@@ -94,8 +134,22 @@ impl CPU {
 				$pc = self.pc + 2;
 			}
 		}
+		macro_rules! REL {
+			($ea: expr, $pc: expr) => {
+				let m:i8 = mmu.read_1byte($pc) as i8;
+				$pc += 1;
+				$ea = $pc.wrapping_add(m as u16);
+			}
+		}
 
 		// Oprands
+		macro_rules! BPL {
+			($ea:expr) => {
+				if self.p&FLG_N != 0 {
+					self.pc = $ea;
+				}
+			}
+		}
 		macro_rules! JSR {
 			($ea:expr) => {
 				mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
@@ -106,6 +160,7 @@ impl CPU {
 		macro_rules! LDA {
 			($ea:expr) => {
 				self.a = mmu.read_1byte($ea);
+				UPDATE_NZ!(self.a, self.p);
 			}
 		}
 		macro_rules! STA {
@@ -119,6 +174,10 @@ impl CPU {
 		self.pc += 1;
 
 		match op {
+			0x10 => { // BPL Relative
+				REL!(ea, self.pc);
+				BPL!(ea);
+			}
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
@@ -129,6 +188,10 @@ impl CPU {
 			}
 			0xA9 => { // LDA Immediate
 				IMM!(ea, self.pc);
+				LDA!(ea);
+			}
+			0xAD => { // LDA Absolute
+				ABS!(ea, self.pc);
 				LDA!(ea);
 			}
 			_ => {

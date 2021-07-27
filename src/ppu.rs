@@ -24,4 +24,8 @@ impl PPU {
 	pub fn set_cr2(&mut self, n:u8) {
 		self.cr2 = n;
 	}
+
+	pub fn get_sr(&self) -> u8 {
+		return self.sr;
+	}
 }

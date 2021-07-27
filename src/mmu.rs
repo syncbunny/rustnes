@@ -28,6 +28,9 @@ impl MMU {
 		let mut ret:u8;
 
 		match addr {
+			0x2002 => {
+				ret = self.ppu.borrow().get_sr();
+			}
 			0x8000 ..= 0xFFFF => {
 				ret = self.prom[(addr - 0x8000) as usize];	
 			}
