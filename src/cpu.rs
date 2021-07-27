@@ -134,6 +134,12 @@ impl CPU {
 				$pc = self.pc + 2;
 			}
 		}
+		macro_rules! ZERO_PAGE {
+			($ea: expr, $pc: expr) => {
+				$ea = mmu.read_1byte(self.pc) as u16;
+				$pc = self.pc + 1;
+			}
+		}
 		macro_rules! REL {
 			($ea: expr, $pc: expr) => {
 				let m:i8 = mmu.read_1byte($pc) as i8;
@@ -190,6 +196,10 @@ impl CPU {
 			}
 			0x60 => { // RTS
 				RTS!();
+			}
+			0x85 => { // STA ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				STA!(ea);
 			}
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);
