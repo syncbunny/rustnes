@@ -168,6 +168,12 @@ impl CPU {
 				mmu.write($ea, self.a);
 			}
 		}
+		macro_rules! RTS {
+			() => {
+				self.pc = mmu.pop_2bytes(0x0100 + self.sp as u16);
+				self.sp -= 2;
+			}
+		}
 
 		// read opcode
 		let op:u8 = mmu.read_1byte(self.pc);
@@ -181,6 +187,9 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x60 => { // RTS
+				RTS!();
 			}
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);

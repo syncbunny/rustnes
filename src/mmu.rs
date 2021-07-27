@@ -28,6 +28,9 @@ impl MMU {
 		let mut ret:u8;
 
 		match addr {
+			0x0000 ..= 0x07FF => {
+				ret = self.wram[addr as usize];
+			}
 			0x2002 => {
 				ret = self.ppu.borrow().get_sr();
 			}
@@ -74,11 +77,19 @@ impl MMU {
 				panic!("mmi.write: unmapped address: {:x}", addr);
 			}
 		}
+		println!("write({:x}, {:x})", addr, n);
 	}
 
 	pub fn push_2bytes(&mut self, addr:u16, n:u16) {
 		self.write(addr -0, (n >> 8) as u8);
 		self.write(addr -1, (n & 0x00FF) as u8);
+	}
+
+	pub fn pop_2bytes(&self, addr: u16) -> u16 {
+		let mut ret: u16;
+		ret = self.read_1byte(addr+1) as u16;
+		ret |= (self.read_1byte(addr+2) as u16) << 8;
+		return ret;
 	}
 
 	pub fn set_mapper(&mut self, m: u8) {
