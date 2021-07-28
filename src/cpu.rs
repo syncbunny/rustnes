@@ -172,6 +172,12 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! LDX {
+			($ea:expr) => {
+				self.x = mmu.read_1byte($ea);
+				UPDATE_NZ!(self.x, self.p);
+			}
+		}
 		macro_rules! LDY {
 			($ea:expr) => {
 				self.y = mmu.read_1byte($ea);
@@ -217,6 +223,10 @@ impl CPU {
 			0xA0 => { // LDY Immediate
 				IMM!(ea, self.pc);
 				LDY!(ea);
+			}
+			0xA2 => { // LDX Immediate
+				IMM!(ea, self.pc);
+				LDX!(ea);
 			}
 			0xA9 => { // LDA Immediate
 				IMM!(ea, self.pc);
