@@ -83,7 +83,8 @@ const clock_table: [u8;256] = [
 
 pub struct CPU {
 	a: u8,
-
+	x: u8,
+	y: u8,
 	sp: u8,
 	p: u8,
 
@@ -99,6 +100,8 @@ impl CPU {
 	pub fn new(mmu: Rc<RefCell<MMU>>) -> CPU {
 		CPU {
 			a: 0,
+			x: 0,
+			y: 0,
 			sp: 0xFD,
 			p:0,
 			pc: 0,
@@ -169,6 +172,12 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! LDY {
+			($ea:expr) => {
+				self.y = mmu.read_1byte($ea);
+				UPDATE_NZ!(self.y, self.p);
+			}
+		}
 		macro_rules! STA {
 			($ea: expr) => {
 				mmu.write($ea, self.a);
@@ -204,6 +213,10 @@ impl CPU {
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);
 				STA!(ea);
+			}
+			0xA0 => { // LDY Immediate
+				IMM!(ea, self.pc);
+				LDY!(ea);
 			}
 			0xA9 => { // LDA Immediate
 				IMM!(ea, self.pc);
