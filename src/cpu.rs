@@ -145,6 +145,13 @@ impl CPU {
 				}
 			}
 		}
+		macro_rules! BNE {
+			($ea:expr) => {
+				if self.p&FLG_Z == 0 {
+					self.pc = $ea;
+				}
+			}
+		}
 		macro_rules! JSR {
 			($ea:expr) => {
 				mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
@@ -235,11 +242,16 @@ impl CPU {
 				ABS!(ea, self.pc);
 				LDA!(ea);
 			}
+			0xD0 => { // BNE Relative
+				REL!(ea, self.pc);
+				BNE!(ea);
+			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
 			}
 		}
 		self.clock_remain = CLOCK_TABLE[op as usize].into();
+		self.dump();
 	}
 	
 	pub fn reset(&mut self) {
@@ -253,5 +265,9 @@ impl CPU {
 		println!("cpu:reset");
 		self.reset_flag = false;
 		self.clock_remain = 6;
+	}
+
+	fn dump(&self) {
+		println!("CPU:PC={:4X},A={:2X},X={:2X},Y={:2X},sp={:2X},p={:2X}", self.pc, self.a, self.x, self.y, self.pc, self.p);
 	}
 }
