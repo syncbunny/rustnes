@@ -175,6 +175,12 @@ impl CPU {
 				mmu.write($ea, self.a);
 			}
 		}
+		macro_rules! DEY {
+			() => {
+				self.y = self.y.wrapping_sub(1);
+				UPDATE_NZ!(self.y, self.p);
+			}
+		}
 		macro_rules! RTS {
 			() => {
 				self.pc = mmu.pop_2bytes(0x0100 + self.sp as u16);
@@ -201,6 +207,9 @@ impl CPU {
 			0x85 => { // STA ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				STA!(ea);
+			}
+			0x88 => { // DEY
+				DEY!();
 			}
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);
