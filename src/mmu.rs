@@ -25,7 +25,7 @@ impl MMU {
 	pub fn read_1byte(&self, addr:u16) -> u8 {
 		// TODO: address mapping
 
-		let mut ret:u8;
+		let ret:u8;
 
 		match addr {
 			0x0000 ..= 0x07FF => {
@@ -58,6 +58,16 @@ impl MMU {
 
 		println!("read_2bytes({:x}) -> {:x}", addr, ret);
 		return ret;
+	}
+
+	pub fn indirect_y(&self, addr: u16, y: u8) -> u16 {
+		let z = self.read_1byte(addr);
+
+		let mut p:u16 = self.read_1byte(z as u16) as u16;
+		p |= (self.read_1byte((z+1) as u16) as u16) << 8;
+		p = p.wrapping_add(y as u16);
+
+		return p;
 	}
 
 	pub fn write(&mut self, addr:u16, n:u8) {

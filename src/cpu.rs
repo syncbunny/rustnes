@@ -41,27 +41,7 @@ macro_rules! UPDATE_Z { ($x: expr, $p: expr) => { if $x == 0 {SET_Z!($p)} else {
 macro_rules! UPDATE_N { ($x: expr, $p: expr) => { if ($x&0x80) !=  0 {SET_N!($p)} else {UNSET_N!($p)} } }
 macro_rules! UPDATE_NZ { ($x: expr, $p: expr) => { UPDATE_N!($x, $p); UPDATE_Z!($x, $p); } }
 
-const opcode_size: [u16;256] = [
-//       0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-/* 00 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 10 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 20 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 30 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 40 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 50 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 60 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 70 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* 80 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0,
-/* 90 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* A0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-/* B0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* C0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* D0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* E0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-/* F0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
-
-const clock_table: [u8;256] = [
+const CLOCK_TABLE: [u8;256] = [
         /* xx    00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F */
         /*  0 */  1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 0, 3, 3, 0,
         /* 10 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
@@ -150,6 +130,12 @@ impl CPU {
 				$ea = $pc.wrapping_add(m as u16);
 			}
 		}
+		macro_rules! INDIRECT_Y {
+			($ea: expr, $pc: expr) => {
+				$ea = mmu.indirect_y(self.pc, self.y);
+				$pc += 1;
+			}
+		}
 
 		// Oprands
 		macro_rules! BPL {
@@ -220,6 +206,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				STA!(ea);
 			}
+			0x91 => { // STA Indirect Y
+				INDIRECT_Y!(ea, self.pc);
+				STA!(ea);
+			}
 			0xA0 => { // LDY Immediate
 				IMM!(ea, self.pc);
 				LDY!(ea);
@@ -240,7 +230,7 @@ impl CPU {
 				panic!("unsupported opcode:{:x}", op);
 			}
 		}
-		self.clock_remain = clock_table[op as usize].into();
+		self.clock_remain = CLOCK_TABLE[op as usize].into();
 	}
 	
 	pub fn reset(&mut self) {
