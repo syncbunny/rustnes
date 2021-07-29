@@ -182,6 +182,12 @@ impl CPU {
 				mmu.write($ea, self.a);
 			}
 		}
+		macro_rules! DEX {
+			() => {
+				self.x = self.x.wrapping_sub(1);
+				UPDATE_NZ!(self.x, self.p);
+			}
+		}
 		macro_rules! DEY {
 			() => {
 				self.y = self.y.wrapping_sub(1);
@@ -192,6 +198,11 @@ impl CPU {
 			() => {
 				self.pc = mmu.pop_2bytes(0x0100 + self.sp as u16);
 				self.sp -= 2;
+			}
+		}
+		macro_rules! SEI {
+			() => {
+				SET_I!(self.p);
 			}
 		}
 		macro_rules! INC {
@@ -217,6 +228,9 @@ impl CPU {
 			}
 			0x60 => { // RTS
 				RTS!();
+			}
+			0x78 => { // SEI
+				SEI!();
 			}
 			0x85 => { // STA ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -248,6 +262,9 @@ impl CPU {
 			0xAD => { // LDA Absolute
 				ABS!(ea, self.pc);
 				LDA!(ea);
+			}
+			0xCA => { // DEX
+				DEX!();
 			}
 			0xD0 => { // BNE Relative
 				REL!(ea, self.pc);
