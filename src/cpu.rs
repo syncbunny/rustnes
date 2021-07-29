@@ -194,6 +194,13 @@ impl CPU {
 				self.sp -= 2;
 			}
 		}
+		macro_rules! INC {
+			($ea: expr) => {
+				let m:u8 = mmu.read_1byte($ea);
+				mmu.write($ea, m+1);
+				UPDATE_NZ!(m+1, self.p);
+			}
+		}
 
 		// read opcode
 		let op:u8 = mmu.read_1byte(self.pc);
@@ -245,6 +252,10 @@ impl CPU {
 			0xD0 => { // BNE Relative
 				REL!(ea, self.pc);
 				BNE!(ea);
+			}
+			0xE6 => { // INC ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				INC!(ea);
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
