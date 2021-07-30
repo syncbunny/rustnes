@@ -205,6 +205,12 @@ impl CPU {
 				self.sp -= 2;
 			}
 		}
+		macro_rules! TAX {
+			() => {
+				self.x = self.a;
+				UPDATE_NZ!(self.x, self.p);
+			}
+		}
 		macro_rules! SEI {
 			() => {
 				SET_I!(self.p);
@@ -267,6 +273,9 @@ impl CPU {
 			0xA9 => { // LDA Immediate
 				IMM!(ea, self.pc);
 				LDA!(ea);
+			}
+			0xAA => { // TAX
+				TAX!();
 			}
 			0xAD => { // LDA Absolute
 				ABS!(ea, self.pc);
