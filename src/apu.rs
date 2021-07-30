@@ -50,4 +50,12 @@ impl APU {
 	pub fn set_dmc1(&mut self, v: u8) {
 		// TODO
 	}
+
+	pub fn set_ch_ctrl(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_frame_counter(&mut self, v: u8) {
+		// TODO
+	}
 }

@@ -89,6 +89,12 @@ impl MMU {
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);
 			}
+			0x4015 => {
+				self.apu.borrow_mut().set_ch_ctrl(n);
+			}
+			0x4017 => {
+				self.apu.borrow_mut().set_frame_counter(n);
+			}
 			_ => {
 				panic!("mmi.write: unmapped address: {:x}", addr);
 			}

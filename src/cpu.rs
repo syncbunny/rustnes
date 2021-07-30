@@ -152,6 +152,11 @@ impl CPU {
 				}
 			}
 		}
+		macro_rules! JMP {
+			($ea: expr) => {
+				self.pc = $ea;
+			}
+		}
 		macro_rules! JSR {
 			($ea:expr) => {
 				mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
@@ -225,6 +230,10 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x4C => { // JMP Absolute
+				ABS!(ea, self.pc);
+				JMP!(ea);
 			}
 			0x60 => { // RTS
 				RTS!();
