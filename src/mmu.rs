@@ -2,23 +2,26 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use crate::ppu::*;
+use crate::apu::*;
 
 pub struct MMU {
 	mapper: u8,
 	wram: Vec<u8>,
 	prom: Vec<u8>,
 	crom: Vec<u8>,
-	ppu: Rc<RefCell<PPU>>
+	ppu: Rc<RefCell<PPU>>,
+	apu: Rc<RefCell<APU>>
 }
 
 impl MMU {
-	pub fn new(ppu:Rc<RefCell<PPU>>) -> MMU {
+	pub fn new(ppu:Rc<RefCell<PPU>>, apu:Rc<RefCell<APU>>) -> MMU {
 		MMU {
 			mapper: 0,
 			wram: vec![0; 0x0800],
 			prom: Vec::new(),
 			crom: Vec::new(),
-			ppu: ppu
+			ppu: ppu,
+			apu: apu,
 		}
 	}
 
@@ -82,6 +85,9 @@ impl MMU {
 			}
 			0x2001 => {
 				self.ppu.borrow_mut().set_cr2(n);
+			}
+			0x4010 => {
+				self.apu.borrow_mut().set_dmc1(n);
 			}
 			_ => {
 				panic!("mmi.write: unmapped address: {:x}", addr);
