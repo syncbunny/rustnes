@@ -23,7 +23,7 @@ fn main() {
 	let apu = Rc::new(RefCell::new(APU::new()));
 	let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu))));
 	let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
-	let nes = NES::new(Rc::clone(&cpu), Rc::clone(&mmu), Rc::clone(&ppu), Rc::clone(&apu));
+	let mut nes = NES::new(Rc::clone(&cpu), Rc::clone(&mmu), Rc::clone(&ppu), Rc::clone(&apu));
 
 	nes.load_cartridge(&args[1]);
 	nes.reset();

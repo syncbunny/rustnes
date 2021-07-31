@@ -47,6 +47,10 @@ impl APU {
 		}
 	}
 
+	pub fn reset(&mut self) {
+		// TODO
+	}
+
 	pub fn set_dmc1(&mut self, v: u8) {
 		// TODO
 	}

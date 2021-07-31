@@ -22,11 +22,18 @@ const FLAG7_PLAYCHOICE10: u8       = 0x02;
 const FLAG7_NES_2_0: u8            = 0x0C;
 const FLAG7_MAPPER_HIGH: u8        = 0xF0;
 
+const CLOCK_DIV_CPU: i32 = 12;
+const CLOCK_DIV_PPU: i32 = 4;
+
+
 pub struct NES {
 	cpu: Rc<RefCell<CPU>>,
 	mmu: Rc<RefCell<MMU>>,
 	ppu: Rc<RefCell<PPU>>,
-	apu: Rc<RefCell<APU>>
+	apu: Rc<RefCell<APU>>,
+
+	clock_cpu: i32,
+	clock_ppu: i32,
 }
 
 impl NES {
@@ -35,7 +42,9 @@ impl NES {
 			cpu: cpu,
 			mmu: mmu,
 			ppu: ppu,
-			apu: apu
+			apu: apu,
+			clock_cpu: 0,
+			clock_ppu: 0
 		}
 	}
 
@@ -77,15 +86,37 @@ impl NES {
 		self.mmu.borrow_mut().set_mapper(mapper);
 	}
 
-	pub fn clock(&self) {
-		let mut cpu = self.cpu.borrow_mut();
-		cpu.clock();
+	pub fn clock(&mut self) {
+		//       Master          CPU      PPU    APU
+    	// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/(12*7457)
+
+		{
+			let mut ppu = self.ppu.borrow_mut();
+			if self.clock_ppu == (CLOCK_DIV_PPU -1) {
+				ppu.clock();
+				self.clock_ppu = 0;
+			} else {
+				self.clock_ppu += 1;
+			}
+		}
+
+		{
+			let mut cpu = self.cpu.borrow_mut();
+			if self.clock_cpu == (CLOCK_DIV_CPU -1) {
+				cpu.clock();
+				self.clock_cpu = 0;
+			} else {
+				self.clock_cpu += 1;
+			}
+		}
 	}
 
 	pub fn reset(&self) {
 		let mut cpu = self.cpu.borrow_mut();
 		let mut ppu = self.ppu.borrow_mut();
+		let mut apu = self.apu.borrow_mut();
 		cpu.reset();
 		ppu.reset();
+		apu.reset();
 	}
 }
