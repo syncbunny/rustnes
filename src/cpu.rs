@@ -223,6 +223,17 @@ impl CPU {
 				SET_I!(self.p);
 			}
 		}
+		macro_rules! ASL_A {
+			() => {
+				if self.a & 0x80 == 0 {
+					UNSET_C!(self.p);
+				} else {
+					SET_C!(self.p);
+				}
+				self.a <<= 1;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
 		macro_rules! INC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
@@ -236,6 +247,9 @@ impl CPU {
 		self.pc += 1;
 
 		match op {
+			0x0A => { // ASL Accumurator
+				ASL_A!();
+			}
 			0x10 => { // BPL Relative
 				REL!(ea, self.pc);
 				BPL!(ea);
