@@ -140,6 +140,13 @@ impl CPU {
 		// Oprands
 		macro_rules! BPL {
 			($ea:expr) => {
+				if self.p&FLG_N == 0 {
+					self.pc = $ea;
+				}
+			}
+		}
+		macro_rules! BMI {
+			($ea:expr) => {
 				if self.p&FLG_N != 0 {
 					self.pc = $ea;
 				}
@@ -236,6 +243,10 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x30 => { // BMI Relative
+				REL!(ea, self.pc);
+				BMI!(ea);
 			}
 			0x4C => { // JMP Absolute
 				ABS!(ea, self.pc);
