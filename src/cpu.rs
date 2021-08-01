@@ -284,6 +284,23 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! ROL_A {
+			() => {
+				let a = self.a;
+				self.a <<= 1;
+				self.a |= if (self.p & FLG_C) != 0 {
+					0x01
+				} else {
+					0x00
+				};
+				if (a & 0x80) != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
 		macro_rules! INC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
@@ -321,6 +338,9 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x2A => { // ROL Accumurator
+				ROL_A!();
 			}
 			0x30 => { // BMI Relative
 				REL!(ea, self.pc);
