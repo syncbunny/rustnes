@@ -79,6 +79,18 @@ impl PPU {
 		return self.sr;
 	}
 
+	pub fn set_scroll(&mut self, v:u8) {
+		// TODO
+	}
+
+	pub fn set_write_addr(&mut self, v:u8) {
+		// TODO
+	}
+
+	pub fn write(&mut self, v:u8) {
+		// TODO
+	}
+
 	fn start_VR(&mut self) {
 		SET_VBLANK!(self.sr);
 	}

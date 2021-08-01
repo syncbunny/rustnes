@@ -95,6 +95,15 @@ impl MMU {
 			0x2001 => {
 				self.ppu.borrow_mut().set_cr2(n);
 			}
+			0x2005 => {
+				self.ppu.borrow_mut().set_scroll(n);
+			}
+			0x2006 => {
+				self.ppu.borrow_mut().set_write_addr(n);
+			}
+			0x2007 => {
+				self.ppu.borrow_mut().write(n);
+			}
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);
 			}
