@@ -103,11 +103,18 @@ impl CPU {
 
 		let mut mmu = self.mmu.borrow_mut();
 
+		// PUSH/POP
 		macro_rules! PUSH {
 			($v: expr) => {
 				mmu.write(0x0100 + (self.sp as u16), $v);
 				self.sp -= 1;
 			}
+		}
+		macro_rules! POP {
+			() => {{
+				self.sp += 1;
+				mmu.read_1byte(0x0100 + (self.sp as u16))
+			}};
 		}
 
 		// Addressing modes
@@ -148,6 +155,12 @@ impl CPU {
 				let m:i8 = mmu.read_1byte($pc) as i8;
 				$pc += 1;
 				$ea = $pc.wrapping_add(m as u16);
+			}
+		}
+		macro_rules! INDIRECT_X {
+			($ea: expr, $pc: expr) => {
+				$ea = mmu.indirect_x(self.pc, self.x);
+				$pc += 1;
 			}
 		}
 		macro_rules! INDIRECT_Y {
@@ -283,6 +296,12 @@ impl CPU {
 				PUSH!(self.a);	
 			}
 		}
+		macro_rules! PLA {
+			() => {
+				self.a = POP!();
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
 		// read opcode
 		let op:u8 = mmu.read_1byte(self.pc);
 		self.pc += 1;
@@ -320,6 +339,9 @@ impl CPU {
 			0x60 => { // RTS
 				RTS!();
 			}
+			0x68 => { // PLA
+				PLA!();
+			}
 			0x78 => { // SEI
 				SEI!();
 			}
@@ -345,6 +367,10 @@ impl CPU {
 			0xA0 => { // LDY Immediate
 				IMM!(ea, self.pc);
 				LDY!(ea);
+			}
+			0xA1 => { // LDA Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				LDA!(ea);
 			}
 			0xA2 => { // LDX Immediate
 				IMM!(ea, self.pc);
