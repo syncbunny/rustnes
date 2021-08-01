@@ -223,6 +223,12 @@ impl CPU {
 				SET_I!(self.p);
 			}
 		}
+		macro_rules! ORA {
+			($ea: expr) => {
+				self.a |= mmu.read_1byte($ea);
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
 		macro_rules! ASL_A {
 			() => {
 				if self.a & 0x80 == 0 {
@@ -247,6 +253,10 @@ impl CPU {
 		self.pc += 1;
 
 		match op {
+			0x09 => { // ORA Immediate
+				IMM!(ea, self.pc);
+				ORA!(ea);
+			}
 			0x0A => { // ASL Accumurator
 				ASL_A!();
 			}
