@@ -218,6 +218,12 @@ impl CPU {
 				UPDATE_NZ!(self.x, self.p);
 			}
 		}
+		macro_rules! TAY {
+			() => {
+				self.y = self.a;
+				UPDATE_NZ!(self.y, self.p);
+			}
+		}
 		macro_rules! SEI {
 			() => {
 				SET_I!(self.p);
@@ -304,6 +310,9 @@ impl CPU {
 			0xA2 => { // LDX Immediate
 				IMM!(ea, self.pc);
 				LDX!(ea);
+			}
+			0xA8 => { // TAY
+				TAY!();
 			}
 			0xA9 => { // LDA Immediate
 				IMM!(ea, self.pc);
