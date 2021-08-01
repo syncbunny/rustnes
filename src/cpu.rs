@@ -273,6 +273,11 @@ impl CPU {
 				SET_I!(self.p);
 			}
 		}
+		macro_rules! CLC {
+			() => {
+				UNSET_C!(self.p);
+			};
+		}
 		macro_rules! CLI {
 			() => {
 				UNSET_I!(self.p);
@@ -346,6 +351,9 @@ impl CPU {
 				REL!(ea, self.pc);
 				BPL!(ea);
 			}
+			0x18 => { // CLC
+				CLC!();
+			}
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
@@ -414,6 +422,10 @@ impl CPU {
 				IMM!(ea, self.pc);
 				LDX!(ea);
 			}
+			0xA5 => { // LDA ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				LDA!(ea);
+			}
 			0xA8 => { // TAY
 				TAY!();
 			}
@@ -426,6 +438,10 @@ impl CPU {
 			}
 			0xAD => { // LDA Absolute
 				ABS!(ea, self.pc);
+				LDA!(ea);
+			}
+			0xB1 => { // LDA Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
 				LDA!(ea);
 			}
 			0xB5 => { // LDA ZeroPage, X
