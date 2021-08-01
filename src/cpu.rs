@@ -103,6 +103,13 @@ impl CPU {
 
 		let mut mmu = self.mmu.borrow_mut();
 
+		macro_rules! PUSH {
+			($v: expr) => {
+				mmu.write(0x0100 + (self.sp as u16), $v);
+				self.sp -= 1;
+			}
+		}
+
 		// Addressing modes
 		let mut ea: u16;
 		macro_rules! IMM { 
@@ -253,7 +260,11 @@ impl CPU {
 				UPDATE_NZ!(m+1, self.p);
 			}
 		}
-
+		macro_rules! PHA {
+			() => {
+				PUSH!(self.a);	
+			}
+		}
 		// read opcode
 		let op:u8 = mmu.read_1byte(self.pc);
 		self.pc += 1;
@@ -277,6 +288,9 @@ impl CPU {
 			0x30 => { // BMI Relative
 				REL!(ea, self.pc);
 				BMI!(ea);
+			}
+			0x48 => { // PHA
+				PHA!();
 			}
 			0x4C => { // JMP Absolute
 				ABS!(ea, self.pc);
@@ -358,6 +372,6 @@ impl CPU {
 	}
 
 	fn dump(&self) {
-		println!("CPU:PC={:4X},A={:2X},X={:2X},Y={:2X},sp={:2X},p={:2X}", self.pc, self.a, self.x, self.y, self.pc, self.p);
+		println!("CPU:PC={:4X},A={:2X},X={:2X},Y={:2X},sp={:2X},p={:2X}", self.pc, self.a, self.x, self.y, self.sp, self.p);
 	}
 }
