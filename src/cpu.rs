@@ -227,6 +227,12 @@ impl CPU {
 				mmu.write($ea, self.a);
 			}
 		}
+		macro_rules! INY {
+			() => {
+				self.y = self.y.wrapping_add(1);
+				UPDATE_NZ!(self.y, self.p);
+			};
+		}
 		macro_rules! DEX {
 			() => {
 				self.x = self.x.wrapping_sub(1);
@@ -266,6 +272,11 @@ impl CPU {
 			() => {
 				SET_I!(self.p);
 			}
+		}
+		macro_rules! CLI {
+			() => {
+				UNSET_I!(self.p);
+			};
 		}
 		macro_rules! ORA {
 			($ea: expr) => {
@@ -356,6 +367,9 @@ impl CPU {
 				ABS!(ea, self.pc);
 				JMP!(ea);
 			}
+			0x58 => { // CLI
+				CLI!();
+			}
 			0x60 => { // RTS
 				RTS!();
 			}
@@ -382,6 +396,10 @@ impl CPU {
 			}
 			0x95 => { // STA ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				STA!(ea);
+			}
+			0x99 => { // STA Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
 				STA!(ea);
 			}
 			0xA0 => { // LDY Immediate
@@ -417,6 +435,9 @@ impl CPU {
 			0xB9 => { // LDA Abusolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				LDA!(ea);
+			}
+			0xC8 => { // INY
+				INY!();
 			}
 			0xCA => { // DEX
 				DEX!();
