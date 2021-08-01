@@ -124,9 +124,22 @@ impl CPU {
 				$pc = self.pc + 2;
 			}
 		}
+		macro_rules! ABS_INDEXED {
+			($ea: expr, $pc: expr, $i: expr) => {
+				$ea = mmu.read_2bytes(self.pc) + ($i as u16);
+				$pc = self.pc + 2;
+			}
+		}
 		macro_rules! ZERO_PAGE {
 			($ea: expr, $pc: expr) => {
 				$ea = mmu.read_1byte(self.pc) as u16;
+				$pc = self.pc + 1;
+			}
+		}
+		macro_rules! ZERO_PAGE_INDEXED {
+			($ea: expr, $pc: expr, $i: expr) => {
+				$ea = mmu.read_1byte(self.pc) as u16;
+				$ea += $i as u16;
 				$pc = self.pc + 1;
 			}
 		}
@@ -231,6 +244,11 @@ impl CPU {
 				UPDATE_NZ!(self.y, self.p);
 			}
 		}
+		macro_rules! SEC {
+			() => {
+				SET_C!(self.p);
+			}
+		}
 		macro_rules! SEI {
 			() => {
 				SET_I!(self.p);
@@ -289,6 +307,9 @@ impl CPU {
 				REL!(ea, self.pc);
 				BMI!(ea);
 			}
+			0x38 => { // SEC
+				SEC!();
+			}
 			0x48 => { // PHA
 				PHA!();
 			}
@@ -317,6 +338,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				STA!(ea);
 			}
+			0x95 => { // STA ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				STA!(ea);
+			}
 			0xA0 => { // LDY Immediate
 				IMM!(ea, self.pc);
 				LDY!(ea);
@@ -337,6 +362,14 @@ impl CPU {
 			}
 			0xAD => { // LDA Absolute
 				ABS!(ea, self.pc);
+				LDA!(ea);
+			}
+			0xB5 => { // LDA ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				LDA!(ea);
+			}
+			0xB9 => { // LDA Abusolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
 				LDA!(ea);
 			}
 			0xCA => { // DEX
