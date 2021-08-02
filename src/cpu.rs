@@ -324,6 +324,28 @@ impl CPU {
 				UPDATE_NZ!(m+1, self.p);
 			}
 		}
+		macro_rules! ADC {
+			($ea: expr) => {
+				let m:u8 = mmu.read_1byte($ea);
+				let c:u8 = if self.p & FLG_C != 0 {1} else {0};
+				let t:u16 = self.a as u16 + m as u16 + c as u16;
+
+				if t > 0x00FFu16 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let new_a:u8 = (t & 0x00FFu16) as u8;
+                if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
+					SET_V!(self.p);
+				} else {
+					UNSET_V!(self.p);
+				}
+
+				self.a = new_a;
+				UPDATE_NZ!(self.a, self.p);
+			};
+		}
 		macro_rules! PHA {
 			() => {
 				PUSH!(self.a);	
@@ -383,6 +405,10 @@ impl CPU {
 			}
 			0x68 => { // PLA
 				PLA!();
+			}
+			0x69 => { // ADC Immediate
+				IMM!(ea, self.pc);
+				ADC!(ea);
 			}
 			0x78 => { // SEI
 				SEI!();
