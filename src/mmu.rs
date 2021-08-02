@@ -54,9 +54,18 @@ impl MMU {
 
 		let mut ret:u16 = 0;
 
-		if addr >= 0x8000 {
-			ret = self.prom[(addr - 0x8000) as usize] as u16;	
-			ret |= (self.prom[(addr - 0x8000 + 1) as usize] as u16) << 8;
+		match addr {
+			0x0000 ..= 0x07FF => {
+				ret = self.prom[(addr as usize)] as u16;	
+				ret |= (self.prom[(addr + 1) as usize] as u16) << 8;
+			}
+			0x8000 ..= 0xFFFF => {
+				ret = self.prom[(addr - 0x8000) as usize] as u16;	
+				ret |= (self.prom[(addr - 0x8000 + 1) as usize] as u16) << 8;
+			}
+			_ => {
+				panic!("mmu.read_2byte: unmapped address: {:x}", addr);
+			}
 		}
 
 		println!("read_2bytes({:x}) -> {:x}", addr, ret);
