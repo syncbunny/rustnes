@@ -171,6 +171,13 @@ impl CPU {
 		}
 
 		// Oprands
+		macro_rules! BCC {
+			($ea: expr) => {
+				if self.p&FLG_C == 0 {
+					self.pc = $ea;
+				}
+			};
+		}
 		macro_rules! BPL {
 			($ea:expr) => {
 				if self.p&FLG_N == 0 {
@@ -283,6 +290,12 @@ impl CPU {
 				UNSET_I!(self.p);
 			};
 		}
+		macro_rules! AND {
+			($ea: expr) => {
+				self. a &= mmu.read_1byte(ea);
+				UPDATE_NZ!(self.a, self.p);
+			};
+		}
 		macro_rules! ORA {
 			($ea: expr) => {
 				self.a |= mmu.read_1byte($ea);
@@ -346,6 +359,17 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			};
 		}
+		macro_rules! CMP {
+			($ea: expr) => {
+				let m:u8 = mmu.read_1byte(ea);
+				if self.a >= m {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				UPDATE_NZ!(self.a.wrapping_sub(m), self.p);
+			};
+		}
 		macro_rules! PHA {
 			() => {
 				PUSH!(self.a);	
@@ -379,6 +403,10 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x29 => { // AND Immediate
+				IMM!(ea, self.pc);
+				AND!(ea);
 			}
 			0x2A => { // ROL Accumurator
 				ROL_A!();
@@ -423,6 +451,10 @@ impl CPU {
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);
 				STA!(ea);
+			}
+			0x90 => { // BCC Relative
+				REL!(ea, self.pc);
+				BCC!(ea);
 			}
 			0x91 => { // STA Indirect Y
 				INDIRECT_Y!(ea, self.pc);
@@ -481,6 +513,10 @@ impl CPU {
 			0xC8 => { // INY
 				INY!();
 			}
+			0xC9 => { // CMP Immediate
+				IMM!(ea, self.pc);
+				CMP!(ea);
+			}
 			0xCA => { // DEX
 				DEX!();
 			}
@@ -497,6 +533,8 @@ impl CPU {
 			}
 		}
 		self.clock_remain = CLOCK_TABLE[op as usize].into();
+		SET_5!(self.p); // bit 5 is always 1
+
 		self.dump();
 	}
 	
