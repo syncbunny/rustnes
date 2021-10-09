@@ -83,7 +83,7 @@ impl CPU {
 			x: 0,
 			y: 0,
 			sp: 0xFD,
-			p:0,
+			p: 0x34,
 			pc: 0,
 			clock_remain: 0,
 			reset_flag: false,
@@ -255,7 +255,7 @@ impl CPU {
 		macro_rules! RTS {
 			() => {
 				self.pc = mmu.pop_2bytes(0x0100 + self.sp as u16);
-				self.sp -= 2;
+				self.sp += 2;
 			}
 		}
 		macro_rules! TAX {
@@ -552,6 +552,6 @@ impl CPU {
 	}
 
 	fn dump(&self) {
-		println!("CPU:PC={:4X},A={:2X},X={:2X},Y={:2X},sp={:2X},p={:2X}", self.pc, self.a, self.x, self.y, self.sp, self.p);
+		println!("CPU:PC={:04X}, A={:02X}, X={:02X}, Y={:02X}, S={:02X}, P={:02X}", self.pc, self.a, self.x, self.y, self.sp, self.p);
 	}
 }
