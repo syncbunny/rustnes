@@ -107,6 +107,6 @@ impl PPU {
 	fn frame_end(&mut self) {
 	}
 
-	fn render_bg(int y) {
+	fn render_bg(&mut self, y: i32) {
 	}
 }
