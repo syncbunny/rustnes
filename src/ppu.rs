@@ -51,7 +51,12 @@ impl PPU {
 			self.frame_start();
 		}
 
-		self.line_clock += 1;
+		if (self.line_clock == 0) {
+			self.render_bg(self.line);
+		}
+
+		//self.line_clock += 1;
+		self.line_clock += CLOCKS_PAR_LINE;
 		if self.line_clock >= CLOCKS_PAR_LINE {
 			println!("PPU: line {}", self.line);
 			self.line_clock -= CLOCKS_PAR_LINE;
@@ -100,6 +105,8 @@ impl PPU {
 	}
 
 	fn frame_end(&mut self) {
+	}
 
+	fn render_bg(int y) {
 	}
 }
