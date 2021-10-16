@@ -1,4 +1,5 @@
-use std::cell::RefCell; use std::rc::Rc; 
+use std::cell::RefCell;
+use std::rc::Rc; 
 use crate::mmu::*;
 
 const RESET_VECTOR: u16 = 0xFFFC;

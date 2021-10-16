@@ -8,3 +8,10 @@ edition = "2018"
 
 [dependencies]
 memmap = "0.7.0"
+
+[dependencies.sdl2]
+features = ["use_mac_framework","bundled","static-link"]
+version = "0.34.2"
+
+[dependencies.gl]
+git = "https://github.com/bjz/gl-rs"
