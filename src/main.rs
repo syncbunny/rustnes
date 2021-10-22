@@ -30,7 +30,7 @@ fn main() {
 	let mut renderer = Renderer::new(Arc::clone(&io));
 
 	thread::spawn(move|| {
-		let ppu = Rc::new(RefCell::new(PPU::new()));
+		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io))));
 		let apu = Rc::new(RefCell::new(APU::new()));
 		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu))));
 		let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
