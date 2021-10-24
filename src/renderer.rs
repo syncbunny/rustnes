@@ -47,6 +47,10 @@ impl Renderer {
 		let ctx = window.gl_create_context().unwrap();
 		gl::load_with(|name| video_subsystem.gl_get_proc_address(name) as *const _);
 
+		debug_assert_eq!(gl_attr.context_profile(), GLProfile::Core);
+		debug_assert_eq!(gl_attr.context_version(), (3, 3));
+
+
 		let mut ret = Renderer {
 			io: io,
 			tex_id: 0,
@@ -57,7 +61,8 @@ impl Renderer {
 			window: window
 		};
 
-		ret.init_gl();
+		ret.check_gl_error();
+		//ret.init_gl();
 		return ret;
 	}
 
@@ -65,20 +70,41 @@ impl Renderer {
 		let mut event_pump = self.sdl_context.event_pump().unwrap();
 
 		'running: loop {
+			self.check_gl_error();
 			unsafe {
 				gl::ClearColor(0.6, 0.0, 0.8, 1.0);
-				//gl::Clear(gl::COLOR_BUFFER_BIT);
+				self.check_gl_error();
+				gl::Clear(gl::COLOR_BUFFER_BIT);
+				self.check_gl_error();
 			}
 
         		self.window.gl_swap_window();
+			self.check_gl_error();
+			{
+				//let mut io = self.io.lock().unwrap();
+		//		self.tex_data[0..].copy_from_slice(&io.vram[0..]);		
+			}
+			unsafe{
+			//	gl::BindTexture(gl::TEXTURE_2D, self.tex_id);
+				//gl::Clear(gl::COLOR_BUFFER_BIT);
+		/*	
+				gl::UseProgram(self.shader_program);
+				gl::BindVertexArray(self.vao);
+				//gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 0);
+				gl::DrawArrays(gl::LINES, 0, 0);
+				gl::BindVertexArray(0);
+*/
+			}
+        		//self.window.gl_swap_window();
+
 			for event in event_pump.poll_iter() {
 				match event {
 					Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
 						break 'running
-					},
-					_ => {}
+					}, _ => {}
 				}
         		}
+			println!("render_loop:");
         		::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
     		}
 	}
@@ -135,7 +161,8 @@ impl Renderer {
 			out vec4 fragment;
 
 			void main() {
-				fragment = texture(image, texcoord);
+				//fragment = texture(image, texcoord);
+				fragment = vec4(0.0, 0.0, 1.0, 1.0);
 			}
 		").unwrap();
 		unsafe {
@@ -183,5 +210,33 @@ impl Renderer {
 		}
 
 		return buf_size;
+	}
+
+	fn check_gl_error(&self) {
+		let err: u32;
+		unsafe {
+			err = gl::GetError();
+		}
+		match err {
+			gl::NO_ERROR => {}
+			gl::INVALID_ENUM => {
+				println!("GL_INVALID_ENUM");
+			}
+			gl::INVALID_VALUE => {
+				println!("GL_INVALID_VALUE");
+			}
+			gl::INVALID_VALUE => {
+				println!("GL_INVALID_OPERATION");
+			}
+			gl::INVALID_FRAMEBUFFER_OPERATION => {
+				println!("GL_INVALID_FRAMEBUFFER_OPERATION");
+			}
+			gl::OUT_OF_MEMORY => {
+				println!("GL_OUT_OF_MEMORY");
+			}
+			_ => {
+				println!("GL: unknown error: {}", err);
+			}
+		}
 	}
 }
