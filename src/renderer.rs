@@ -66,7 +66,6 @@ impl Renderer {
 		};
 
 		ret.init_gl();
-		ret.check_gl_error(line!());
 		return ret;
 	}
 
@@ -82,24 +81,32 @@ impl Renderer {
 				self.check_gl_error(line!());
 			}
 
-        		self.window.gl_swap_window();
+        		//self.window.gl_swap_window();
 			self.check_gl_error(line!());
 			{
-				//let mut io = self.io.lock().unwrap();
-		//		self.tex_data[0..].copy_from_slice(&io.vram[0..]);		
+				let mut io = self.io.lock().unwrap();
+				self.tex_data[0..].copy_from_slice(&io.vram[0..]);
 			}
+
 			unsafe{
-			//	gl::BindTexture(gl::TEXTURE_2D, self.tex_id);
-				//gl::Clear(gl::COLOR_BUFFER_BIT);
-		/*	
+				gl::Clear(gl::COLOR_BUFFER_BIT);
+
+				gl::BindTexture(gl::TEXTURE_2D, self.tex_id);
+				self.check_gl_error(line!());
+				gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, 256, 240, 0, gl::RGB, gl::UNSIGNED_BYTE, self.tex_data.as_ptr() as *const c_void);
+				self.check_gl_error(line!());
+
 				gl::UseProgram(self.shader_program);
+				self.check_gl_error(line!());
 				gl::BindVertexArray(self.vao);
-				//gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 0);
-				gl::DrawArrays(gl::LINES, 0, 0);
+				self.check_gl_error(line!());
+				gl::DrawArrays(gl::TRIANGLE_STRIP, 0, 4);
+				//gl::DrawArrays(gl::LINES, 0, 4);
+				self.check_gl_error(line!());
 				gl::BindVertexArray(0);
-*/
+				self.check_gl_error(line!());
 			}
-        		//self.window.gl_swap_window();
+        		self.window.gl_swap_window();
 
 			for event in event_pump.poll_iter() {
 				match event {
@@ -128,7 +135,7 @@ impl Renderer {
 			gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
 			self.check_gl_error(line!());
 
-			gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, 256,  240, 0, gl::RGB, gl::UNSIGNED_BYTE, self.tex_data.as_ptr() as *const u8 as *const c_void);
+			gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, 256,  240, 0, gl::RGB, gl::UNSIGNED_BYTE, self.tex_data.as_ptr() as *const c_void);
 			self.check_gl_error(line!());
 
 			// create object
@@ -182,8 +189,7 @@ impl Renderer {
 			out vec4 fragment;
 
 			void main() {
-				//fragment = texture(image, texcoord);
-				fragment = vec4(0.0, 0.0, 1.0, 1.0);
+				fragment = texture(image, texcoord);
 			}
 		").unwrap();
 		unsafe {
@@ -219,7 +225,16 @@ impl Renderer {
 			gl::DeleteShader(vobj);
 			self.check_gl_error(line!());
 		}
-		
+	
+		unsafe {
+			gl::BindAttribLocation(self.shader_program, 0, CString::new("position").unwrap().as_ptr());
+			self.check_gl_error(line!());
+			gl::BindFragDataLocation(self.shader_program, 0, CString::new("fragment").unwrap().as_ptr());
+			self.check_gl_error(line!());
+			gl::LinkProgram(self.shader_program);
+			self.check_gl_error(line!());
+			self.print_program_log(self.shader_program);
+		}	
 	}
 
 	fn print_shader_log(&self, shader: u32, msg: &str) -> i32 {
@@ -235,7 +250,33 @@ impl Renderer {
 				gl::GetShaderInfoLog(shader, buf_size, &mut length, log.as_mut_ptr() as *mut i8);
 			}
 			let log_str = std::str::from_utf8(&log).unwrap();
-			println!("{}:{}", msg, log_str);
+			println!("GL: {}:{}", msg, log_str);
+		}
+
+		return buf_size;
+	}
+
+	fn print_program_log(&self, prog: u32) -> i32 {
+		let mut buf_size: i32 = 0;
+
+		unsafe {
+			let mut link_status:i32 = 0;
+			gl::GetProgramiv(prog, gl::LINK_STATUS, &mut link_status);
+			if link_status == gl::FALSE.into() {
+				println!("GL: Program not linked");
+			}
+			gl::GetProgramiv(prog, gl::INFO_LOG_LENGTH, &mut buf_size);
+		}
+		if buf_size > 1 {
+			let mut length = 0_i32;
+			buf_size += 1;
+			let mut log:Vec<u8> = Vec::with_capacity(1024);
+			unsafe {
+				gl::GetProgramInfoLog(prog, 1024, &mut length, log.as_mut_ptr().cast());
+				log.set_len(length as usize);
+			}
+			let log_str = String::from_utf8_lossy(&log);
+			println!("GL prog: {}", log_str);
 		}
 
 		return buf_size;
