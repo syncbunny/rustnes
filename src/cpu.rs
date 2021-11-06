@@ -179,6 +179,13 @@ impl CPU {
 				}
 			};
 		}
+		macro_rules! BEQ {
+			($ea: expr) => {
+				if self.p&FLG_Z != 0 {
+					self.pc = $ea;
+				}
+			};
+		}
 		macro_rules! BPL {
 			($ea:expr) => {
 				if self.p&FLG_N == 0 {
@@ -564,6 +571,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				LDA!(ea);
 			}
+			0xC5 => { // CMP ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				CMP!(ea);
+			}
 			0xC8 => { // INY
 				INY!();
 			}
@@ -591,6 +602,10 @@ impl CPU {
 			}
 			0xE8 => { // INX
 				INX!();
+			}
+			0xF0 => { // BEQ Relative
+				REL!(ea, self.pc);
+				BEQ!(ea);
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);

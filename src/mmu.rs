@@ -157,7 +157,7 @@ impl MMU {
 				self.prom[0..32768].copy_from_slice(prom);
 			}
 			_ => {
-				panic!("not supported prom size.");	
+				panic!("not supported prom size.");
 			}
 		}
 	}
