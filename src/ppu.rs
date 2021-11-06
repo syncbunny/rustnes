@@ -44,6 +44,8 @@ impl PPU {
 	}
 
 	pub fn reset(&mut self) {	
+		self.line = 0;
+		self.line_clock = 0;
 	}
 
 	pub fn clock(&mut self) {

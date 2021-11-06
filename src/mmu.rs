@@ -147,8 +147,19 @@ impl MMU {
 	}
 
 	pub fn set_PROM(&mut self, prom: &[u8]) {
-		self.prom = prom.to_vec();
-		println!("prom.len={}", self.prom.len());
+		println!("prom.len={}", prom.len());
+		self.prom = vec![0; 32768];
+		match prom.len() {
+			0x4000 => {
+				self.prom[16384..32768].copy_from_slice(prom);
+			}
+			0x8000 => {
+				self.prom[0..32768].copy_from_slice(prom);
+			}
+			_ => {
+				panic!("not supported prom size.");	
+			}
+		}
 	}
 
 	pub fn set_CROM(&mut self, crom: &[u8]) {
