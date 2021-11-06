@@ -234,6 +234,22 @@ impl CPU {
 				mmu.write($ea, self.a);
 			}
 		}
+		macro_rules! STX {
+			($ea: expr) => {
+				mmu.write($ea, self.x);
+			}
+		}
+		macro_rules! STY {
+			($ea: expr) => {
+				mmu.write($ea, self.y);
+			}
+		}
+		macro_rules! INX {
+			() => {
+				self.x = self.x.wrapping_add(1);
+				UPDATE_NZ!(self.x, self.p);
+			};
+		}
 		macro_rules! INY {
 			() => {
 				self.y = self.y.wrapping_add(1);
@@ -270,6 +286,12 @@ impl CPU {
 				UPDATE_NZ!(self.y, self.p);
 			}
 		}
+		macro_rules! TXS {
+			() => {
+				self.sp = self.x;
+				// NO flags update
+			}
+		}
 		macro_rules! SEC {
 			() => {
 				SET_C!(self.p);
@@ -283,6 +305,11 @@ impl CPU {
 		macro_rules! CLC {
 			() => {
 				UNSET_C!(self.p);
+			};
+		}
+		macro_rules! CLD {
+			() => {
+				UNSET_D!(self.p);
 			};
 		}
 		macro_rules! CLI {
@@ -370,6 +397,17 @@ impl CPU {
 				UPDATE_NZ!(self.a.wrapping_sub(m), self.p);
 			};
 		}
+		macro_rules! CPX {
+			($ea: expr) => {
+				let m:u8 = mmu.read_1byte(ea);
+				if self.x >= m {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				UPDATE_NZ!(self.x.wrapping_sub(m), self.p);
+			};
+		}
 		macro_rules! PHA {
 			() => {
 				PUSH!(self.a);	
@@ -448,6 +486,14 @@ impl CPU {
 			0x88 => { // DEY
 				DEY!();
 			}
+			0x8C => { // STY Absolute
+				ABS!(ea, self.pc);
+				STY!(ea);
+			}
+			0x8E => { // STX Absolute
+				ABS!(ea, self.pc);
+				STX!(ea);
+			}
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);
 				STA!(ea);
@@ -467,6 +513,9 @@ impl CPU {
 			0x99 => { // STA Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				STA!(ea);
+			}
+			0x9A => { // TXS
+				TXS!();
 			}
 			0xA0 => { // LDY Immediate
 				IMM!(ea, self.pc);
@@ -510,6 +559,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.y);
 				LDA!(ea);
 			}
+			0xBD => { // LDA Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				LDA!(ea);
+			}
 			0xC8 => { // INY
 				INY!();
 			}
@@ -524,9 +577,19 @@ impl CPU {
 				REL!(ea, self.pc);
 				BNE!(ea);
 			}
+			0xD8 => { // CLD
+				CLD!();
+			}
+			0xE0 => { // CPX Immediate
+				IMM!(ea, self.pc);
+				CPX!(ea);
+			}
 			0xE6 => { // INC ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				INC!(ea);
+			}
+			0xE8 => { // INX
+				INX!();
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
