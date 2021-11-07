@@ -3,12 +3,15 @@ extern crate memmap;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::fs::File;
+use std::sync::Arc;
+use std::sync::Mutex;
 use memmap::Mmap;
 
 use crate::cpu::*;
 use crate::mmu::*;
 use crate::ppu::*;
 use crate::apu::*;
+use crate::events::*;
 
 // NES Const
 const FLAG6_V_MIRROR: u8           = 0x01;
@@ -34,17 +37,20 @@ pub struct NES {
 
 	clock_cpu: i32,
 	clock_ppu: i32,
+
+	event_queue: Arc<Mutex<EventQueue>>,
 }
 
 impl NES {
-	pub fn new(cpu: Rc<RefCell<CPU>>, mmu: Rc<RefCell<MMU>>, ppu: Rc<RefCell<PPU>>, apu: Rc<RefCell<APU>>) -> NES {
+	pub fn new(cpu: Rc<RefCell<CPU>>, mmu: Rc<RefCell<MMU>>, ppu: Rc<RefCell<PPU>>, apu: Rc<RefCell<APU>>, event_queue: Arc<Mutex<EventQueue>>) -> NES {
 		NES {
 			cpu: cpu,
 			mmu: mmu,
 			ppu: ppu,
 			apu: apu,
 			clock_cpu: 0,
-			clock_ppu: 0
+			clock_ppu: 0,
+			event_queue: event_queue,
 		}
 	}
 
