@@ -94,8 +94,25 @@ impl NES {
 
 	pub fn clock(&mut self) {
 		//       Master          CPU      PPU    APU
-    	// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/(12*7457)
+		// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/(12*7457)
 
+		{
+			let mut queue = self.event_queue.lock().unwrap();
+			let evt_w = queue.pop();
+			match evt_w {
+				None => {}
+				_ => {
+					let evt = evt_w.unwrap();
+					match (evt.event_type) {
+						EventType::NMI => {
+							println!("NMI!");
+							let mut cpu = self.cpu.borrow_mut();
+							cpu.nmi();
+						}
+					}
+				}
+			}
+		}
 		{
 			let mut ppu = self.ppu.borrow_mut();
 			if self.clock_ppu == (CLOCK_DIV_PPU -1) {

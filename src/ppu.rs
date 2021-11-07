@@ -1,12 +1,16 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 use crate::io::*;
+use crate::events::*;
 
 const CLOCKS_PAR_LINE: u32 = 341;
 const DRAWABLE_LINES: u32 = 240;
 const SCAN_LINES: u32 = 262;
 
 const CR1_NAMETABLE_MASK: u8 = 0x02;
+
+/* Control Regster1 &H2000 */
+const FLAG_NMI_ON_VB: u8 = 0x80;
 
 /* Status Register &H2002 */
 const FLAG_VBLANK: u8 = 0x80;
@@ -45,11 +49,12 @@ pub struct PPU {
 
 	mem: Vec<u8>,
 
-	io: Arc<Mutex<IO>>
+	io: Arc<Mutex<IO>>,
+	event_queue: Arc<Mutex<EventQueue>>
 }
 
 impl PPU {
-	pub fn new(io:Arc<Mutex<IO>>) -> PPU {
+	pub fn new(io:Arc<Mutex<IO>>, event_queue: Arc<Mutex<EventQueue>>) -> PPU {
 		PPU {
 			cr1: 0,
 			cr2: 0,
@@ -62,7 +67,8 @@ impl PPU {
 
 			mem: vec![0; 0x4000],
 
-			io: io
+			io: io,
+			event_queue: event_queue
 		}
 
 	}
@@ -121,6 +127,10 @@ impl PPU {
 
 	fn start_VR(&mut self) {
 		SET_VBLANK!(self.sr);
+		if (self.cr1 & FLAG_NMI_ON_VB) != 0 {
+			let mut queue = self.event_queue.lock().unwrap();
+			queue.push(Event::new(EventType::NMI));			
+		}
 	}
 
 	fn frame_start(&mut self) {

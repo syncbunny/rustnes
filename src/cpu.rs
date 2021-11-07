@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc; 
 use crate::mmu::*;
 
+const NMI_VECTOR: u16 = 0xFFFA;
 const RESET_VECTOR: u16 = 0xFFFC;
 const FLG_C: u8 =  0x01;
 const FLG_Z: u8 =  0x02;
@@ -73,6 +74,7 @@ pub struct CPU {
 
 	clock_remain: u32,
 	reset_flag: bool,
+	nmi_flag: bool,
 
 	mmu: Rc<RefCell<MMU>>,
 }
@@ -88,6 +90,7 @@ impl CPU {
 			pc: 0,
 			clock_remain: 0,
 			reset_flag: false,
+			nmi_flag: false,
 			mmu: mmu 
 		}
 	}
@@ -95,6 +98,9 @@ impl CPU {
 	pub fn clock(&mut self) {
 		if self.reset_flag {
 			self.do_reset();
+		}
+		if self.nmi_flag {
+			self.do_nmi();
 		}
 	
 		if self.clock_remain > 0 {
@@ -618,15 +624,42 @@ impl CPU {
 	}
 	
 	pub fn reset(&mut self) {
-		let mmu = self.mmu.borrow();
-		self.pc = mmu.read_2bytes(RESET_VECTOR);
 		self.reset_flag = true;
+		self.clock_remain = 0;
+	}
+
+	pub fn nmi(&mut self) {
+		self.nmi_flag = true;
 		self.clock_remain = 0;
 	}
 	
 	fn do_reset(&mut self) {
 		println!("cpu:reset");
+		let mmu = self.mmu.borrow();
+		self.pc = mmu.read_2bytes(RESET_VECTOR);
+		SET_I!(self.p);
 		self.reset_flag = false;
+		self.clock_remain = 6;
+	}
+
+	fn do_nmi(&mut self) {
+		println!("do_nmi");
+		UNSET_B!(self.p);
+		SET_I!(self.p);
+
+		// Push SP
+		let mut mmu = self.mmu.borrow_mut();
+		mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
+		self.sp -= 2;
+
+		// Push P
+		mmu.write(0x0100 + (self.sp as u16), self.p);
+		self.sp -= 1;
+
+		// Set PC to NMI Vector
+		self.pc = mmu.read_2bytes(NMI_VECTOR);
+
+		self.nmi_flag = false;
 		self.clock_remain = 6;
 	}
 

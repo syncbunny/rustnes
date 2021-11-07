@@ -33,7 +33,7 @@ fn main() {
 	let mut event_queue = Arc::new(Mutex::new(EventQueue::new()));
 
 	thread::spawn(move|| {
-		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io))));
+		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io), Arc::clone(&event_queue))));
 		let apu = Rc::new(RefCell::new(APU::new()));
 		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu))));
 		let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
