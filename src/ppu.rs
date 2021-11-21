@@ -48,6 +48,7 @@ pub struct PPU {
 	line_clock: u32,
 
 	mem: Vec<u8>,
+	sprite_mem: Vec<u8>,
 
 	io: Arc<Mutex<IO>>,
 	event_queue: Arc<Mutex<EventQueue>>
@@ -66,6 +67,7 @@ impl PPU {
 			line_clock: 0,
 
 			mem: vec![0; 0x4000],
+			sprite_mem: vec![0; 256],
 
 			io: io,
 			event_queue: event_queue
@@ -167,5 +169,9 @@ impl PPU {
 			//io.vram[0] = 0;
 			io.draw_pixel(x, y, pat, pat, pat);
 		}
+	}
+
+	pub fn get_sprite_mem(&mut self) -> &mut Vec<u8> {
+		&mut self.sprite_mem
 	}
 }

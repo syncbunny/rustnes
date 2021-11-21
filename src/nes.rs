@@ -109,27 +109,33 @@ impl NES {
 							let mut cpu = self.cpu.borrow_mut();
 							cpu.nmi();
 						}
+						EventType::DMA => {
+							println!("DMA!");
+							// Stop CPU 514 cpu-clock
+							self.clock_cpu = 514*CLOCK_DIV_CPU;
+							println!("clock_cpu={}", self.clock_cpu);
+						}
 					}
 				}
 			}
 		}
 		{
 			let mut ppu = self.ppu.borrow_mut();
-			if self.clock_ppu == (CLOCK_DIV_PPU -1) {
+			if self.clock_ppu <= 0 {
 				ppu.clock();
-				self.clock_ppu = 0;
+				self.clock_ppu = CLOCK_DIV_PPU -1;
 			} else {
-				self.clock_ppu += 1;
+				self.clock_ppu -= 1;
 			}
 		}
 
 		{
 			let mut cpu = self.cpu.borrow_mut();
-			if self.clock_cpu == (CLOCK_DIV_CPU -1) {
+			if self.clock_cpu <= 0 {
 				cpu.clock();
-				self.clock_cpu = 0;
+				self.clock_cpu = CLOCK_DIV_CPU -1;
 			} else {
-				self.clock_cpu += 1;
+				self.clock_cpu -= 1;
 			}
 		}
 	}

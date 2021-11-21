@@ -1,8 +1,11 @@
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use crate::ppu::*;
 use crate::apu::*;
+use crate::events::*;
 
 pub struct MMU {
 	mapper: u8,
@@ -10,11 +13,13 @@ pub struct MMU {
 	prom: Vec<u8>,
 	crom: Vec<u8>,
 	ppu: Rc<RefCell<PPU>>,
-	apu: Rc<RefCell<APU>>
+	apu: Rc<RefCell<APU>>,
+
+	event_queue: Arc<Mutex<EventQueue>>
 }
 
 impl MMU {
-	pub fn new(ppu:Rc<RefCell<PPU>>, apu:Rc<RefCell<APU>>) -> MMU {
+	pub fn new(ppu:Rc<RefCell<PPU>>, apu:Rc<RefCell<APU>>, event_queue: Arc<Mutex<EventQueue>>) -> MMU {
 		MMU {
 			mapper: 0,
 			wram: vec![0; 0x0800],
@@ -22,6 +27,8 @@ impl MMU {
 			crom: Vec::new(),
 			ppu: ppu,
 			apu: apu,
+
+			event_queue: event_queue
 		}
 	}
 
@@ -116,6 +123,9 @@ impl MMU {
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);
 			}
+			0x4014 => {
+				self.start_dma(n);
+			}
 			0x4015 => {
 				self.apu.borrow_mut().set_ch_ctrl(n);
 			}
@@ -165,5 +175,16 @@ impl MMU {
 	pub fn set_CROM(&mut self, crom: &[u8]) {
 		self.crom = crom.to_vec();
 		println!("crom.len={}", self.crom.len());
+	}
+
+	fn start_dma(&mut self, n:u8) {
+		let src:u16 = (n as u16) << 8;
+
+		let mut ppu = self.ppu.borrow_mut();
+		let sprite_mem = ppu.get_sprite_mem();
+		sprite_mem[0..256].copy_from_slice(&self.wram[src as usize..src as usize + 256]);
+
+		let mut queue = self.event_queue.lock().unwrap();
+		queue.push(Event::new(EventType::DMA));
 	}
 }

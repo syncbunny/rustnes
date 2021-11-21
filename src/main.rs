@@ -35,7 +35,7 @@ fn main() {
 	thread::spawn(move|| {
 		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io), Arc::clone(&event_queue))));
 		let apu = Rc::new(RefCell::new(APU::new()));
-		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu))));
+		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&event_queue))));
 		let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
 		let mut nes = NES::new(Rc::clone(&cpu), Rc::clone(&mmu), Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&event_queue));
 
