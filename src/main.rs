@@ -4,6 +4,7 @@ mod mmu;
 mod cpu;
 mod ppu;
 mod apu;
+mod pad;
 mod nes;
 mod renderer;
 mod io;
@@ -20,6 +21,7 @@ use std::time::Duration;
 use crate::cpu::*;
 use crate::ppu::*;
 use crate::apu::*;
+use crate::pad::*;
 use crate::mmu::*;
 use crate::nes::*;
 use crate::renderer::*;
@@ -35,7 +37,8 @@ fn main() {
 	thread::spawn(move|| {
 		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io), Arc::clone(&event_queue))));
 		let apu = Rc::new(RefCell::new(APU::new()));
-		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&event_queue))));
+		let pad = Rc::new(RefCell::new(Pad::new()));
+		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu), Rc::clone(&pad), Arc::clone(&event_queue))));
 		let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
 		let mut nes = NES::new(Rc::clone(&cpu), Rc::clone(&mmu), Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&event_queue));
 

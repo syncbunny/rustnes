@@ -5,6 +5,7 @@ use std::sync::Mutex;
 
 use crate::ppu::*;
 use crate::apu::*;
+use crate::pad::*;
 use crate::events::*;
 
 pub struct MMU {
@@ -14,12 +15,18 @@ pub struct MMU {
 	crom: Vec<u8>,
 	ppu: Rc<RefCell<PPU>>,
 	apu: Rc<RefCell<APU>>,
+	pad: Rc<RefCell<Pad>>,
 
 	event_queue: Arc<Mutex<EventQueue>>
 }
 
 impl MMU {
-	pub fn new(ppu:Rc<RefCell<PPU>>, apu:Rc<RefCell<APU>>, event_queue: Arc<Mutex<EventQueue>>) -> MMU {
+	pub fn new(
+		ppu:Rc<RefCell<PPU>>,
+		apu:Rc<RefCell<APU>>,
+		pad:Rc<RefCell<Pad>>,
+		event_queue: Arc<Mutex<EventQueue>>
+	) -> MMU {
 		MMU {
 			mapper: 0,
 			wram: vec![0; 0x0800],
@@ -27,6 +34,7 @@ impl MMU {
 			crom: Vec::new(),
 			ppu: ppu,
 			apu: apu,
+			pad: pad,
 
 			event_queue: event_queue
 		}
@@ -43,6 +51,12 @@ impl MMU {
 			}
 			0x2002 => {
 				ret = self.ppu.borrow().get_sr();
+			}
+			0x4016 => {
+				ret = self.pad.borrow_mut().in1();
+			}
+			0x4017 => {
+				ret = self.pad.borrow_mut().in2();
 			}
 			0x8000 ..= 0xFFFF => {
 				ret = self.prom[(addr - 0x8000) as usize];	
@@ -71,7 +85,8 @@ impl MMU {
 				ret |= (self.prom[(addr - 0x8000 + 1) as usize] as u16) << 8;
 			}
 			_ => {
-				panic!("mmu.read_2byte: unmapped address: {:x}", addr);
+				ret = self.read_1byte(addr) as u16;
+				ret |= (self.read_1byte(addr + 1) as u16) << 8;
 			}
 		}
 
@@ -80,12 +95,12 @@ impl MMU {
 	}
 
 	pub fn indirect_x(&self, addr: u16, x: u8) -> u16 {
-        let z:u8 = self.read_1byte(addr).wrapping_add(x);
+        	let z:u8 = self.read_1byte(addr).wrapping_add(x);
 
 		let mut p:u16 = self.read_1byte(z as u16) as u16;
 		p |= (self.read_1byte((z+1) as u16) as u16) << 8;
 
-        return p;
+        	return p;
 	}
 
 	pub fn indirect_y(&self, addr: u16, y: u8) -> u16 {
@@ -128,6 +143,9 @@ impl MMU {
 			}
 			0x4015 => {
 				self.apu.borrow_mut().set_ch_ctrl(n);
+			}
+			0x4016 => {
+				self.pad.borrow_mut().out(n);
 			}
 			0x4017 => {
 				self.apu.borrow_mut().set_frame_counter(n);
