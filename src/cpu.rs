@@ -288,10 +288,24 @@ impl CPU {
 				self.sp += 2;
 			}
 		}
+		macro_rules! RTI {
+			() => {
+				self.sp = self.sp +1;
+				self.p = mmu.read_1byte(0x0100 + self.sp as u16);
+				self.pc = mmu.pop_2bytes(0x0100 + self.sp as u16);
+				self.sp += 2;
+			}
+		}
 		macro_rules! TAX {
 			() => {
 				self.x = self.a;
 				UPDATE_NZ!(self.x, self.p);
+			}
+		}
+		macro_rules! TXA {
+			() => {
+				self.a = self.x;
+				UPDATE_NZ!(self.a, self.p);
 			}
 		}
 		macro_rules! TAY {
@@ -470,6 +484,9 @@ impl CPU {
 			0x38 => { // SEC
 				SEC!();
 			}
+			0x40 => { // RTI
+				RTI!();
+			}
 			0x48 => { // PHA
 				PHA!();
 			}
@@ -499,6 +516,9 @@ impl CPU {
 			}
 			0x88 => { // DEY
 				DEY!();
+			}
+			0x8A => { // TXA
+				TXA!();
 			}
 			0x8C => { // STY Absolute
 				ABS!(ea, self.pc);
