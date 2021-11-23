@@ -177,10 +177,17 @@ impl CPU {
 			}
 		}
 
-		// Oprands
+		// Opcode
 		macro_rules! BCC {
 			($ea: expr) => {
 				if self.p&FLG_C == 0 {
+					self.pc = $ea;
+				}
+			};
+		}
+		macro_rules! BCS {
+			($ea: expr) => {
+				if self.p&FLG_C != 0 {
 					self.pc = $ea;
 				}
 			};
@@ -347,13 +354,31 @@ impl CPU {
 		}
 		macro_rules! AND {
 			($ea: expr) => {
-				self. a &= mmu.read_1byte(ea);
+				self. a &= mmu.read_1byte($ea);
 				UPDATE_NZ!(self.a, self.p);
 			};
 		}
 		macro_rules! ORA {
 			($ea: expr) => {
 				self.a |= mmu.read_1byte($ea);
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! EOR {
+			($ea: expr) => {
+				let m = mmu.read_1byte($ea);
+				self.a ^= m;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! LSR_A {
+			() => {
+				if self.a & 0x01 == 0 {
+					UNSET_C!(self.p);
+				} else {
+					SET_C!(self.p);
+				}
+				self.a >>= 1;
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
@@ -385,6 +410,25 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! ROL {
+			($ea: expr) => {
+				let m = mmu.read_1byte($ea);
+				let mut mm = m;
+				mm = m << 1;
+				mm |= if (self.p & FLG_C) != 0 {
+					0x01
+				} else {
+					0x00
+				};
+				if (m & 0x80) != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				mmu.write($ea, mm);
+				UPDATE_NZ!(mm, self.p);
+			}
+		}
 		macro_rules! INC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
@@ -404,7 +448,7 @@ impl CPU {
 					UNSET_C!(self.p);
 				}
 				let new_a:u8 = (t & 0x00FFu16) as u8;
-                if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
+                		if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
 					SET_V!(self.p);
 				} else {
 					UNSET_V!(self.p);
@@ -470,6 +514,14 @@ impl CPU {
 				ABS!(ea, self.pc);
 				JSR!(ea);
 			}
+			0x25 => { // AND Zeropage
+				ZERO_PAGE!(ea, self.pc);
+				AND!(ea);
+			}
+			0x26 => { // ROL ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				ROL!(ea);
+			}
 			0x29 => { // AND Immediate
 				IMM!(ea, self.pc);
 				AND!(ea);
@@ -487,8 +539,15 @@ impl CPU {
 			0x40 => { // RTI
 				RTI!();
 			}
+			0x45 => { // EOR ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				EOR!(ea);
+			}
 			0x48 => { // PHA
 				PHA!();
+			}
+			0x4A => { // LSR A
+				LSR_A!();
 			}
 			0x4C => { // JMP Absolute
 				ABS!(ea, self.pc);
@@ -513,6 +572,10 @@ impl CPU {
 			0x85 => { // STA ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				STA!(ea);
+			}
+			0x86 => { // STX ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				STX!(ea);
 			}
 			0x88 => { // DEY
 				DEY!();
@@ -580,6 +643,10 @@ impl CPU {
 			0xAD => { // LDA Absolute
 				ABS!(ea, self.pc);
 				LDA!(ea);
+			}
+			0xB0 => { // BCS Relative
+				REL!(ea, self.pc);
+				BCS!(ea);
 			}
 			0xB1 => { // LDA Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
