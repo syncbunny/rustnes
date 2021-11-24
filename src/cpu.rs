@@ -199,6 +199,20 @@ impl CPU {
 				}
 			};
 		}
+		macro_rules! BVC {
+			($ea: expr) => {
+				if self.p&FLG_V == 0 {
+					self.pc = $ea;
+				}
+			}
+		}
+		macro_rules! BVS {
+			($ea: expr) => {
+				if self.p&FLG_V != 0 {
+					self.pc = $ea;
+				}
+			}
+		}
 		macro_rules! BPL {
 			($ea:expr) => {
 				if self.p&FLG_N == 0 {
@@ -480,6 +494,14 @@ impl CPU {
 				UPDATE_NZ!(self.x.wrapping_sub(m), self.p);
 			};
 		}
+		macro_rules! BIT {
+			($ea: expr) => {
+				let mut m:u8 = mmu.read_1byte($ea);
+				self.p = (m&0xC0)|(self.p&0x3F);
+				m &= self.a;
+				UPDATE_Z!(m, self.p);
+			}
+		}
 		macro_rules! PHA {
 			() => {
 				PUSH!(self.a);	
@@ -513,6 +535,10 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x24 => { // BIT Zeropage
+				ZERO_PAGE!(ea, self.pc);
+				BIT!(ea);
 			}
 			0x25 => { // AND Zeropage
 				ZERO_PAGE!(ea, self.pc);
@@ -553,6 +579,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				JMP!(ea);
 			}
+			0x50 => { // BVC Relative
+				REL!(ea, self.pc);
+				BVC!(ea);
+			}
 			0x58 => { // CLI
 				CLI!();
 			}
@@ -565,6 +595,10 @@ impl CPU {
 			0x69 => { // ADC Immediate
 				IMM!(ea, self.pc);
 				ADC!(ea);
+			}
+			0x70 => { // BVS Relative
+				REL!(ea, self.pc);
+				BVS!(ea);
 			}
 			0x78 => { // SEI
 				SEI!();
@@ -695,6 +729,8 @@ impl CPU {
 			}
 			0xE8 => { // INX
 				INX!();
+			}
+			0xEA => { // NOP
 			}
 			0xF0 => { // BEQ Relative
 				REL!(ea, self.pc);
