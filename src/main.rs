@@ -28,8 +28,24 @@ use crate::renderer::*;
 use crate::io::*;
 use crate::events::*;
 
+struct Configure {
+	cartridge: String,
+	use_entry: bool,
+	entry: u16,
+}
+
 fn main() {
-	let args:Vec<String> = env::args().collect();
+	let mut config = Configure {
+		cartridge: "".to_string(),
+		use_entry: false,
+		entry: 0,
+	};
+	analyze_arg(&mut config);
+	if (config.cartridge.is_empty()) {
+		println!("Usage: rustnes [--entry address] cartridge");
+		return;
+	}
+
 	let mut io = Arc::new(Mutex::new(IO::new()));
 	let mut renderer = Renderer::new(Arc::clone(&io));
 	let mut event_queue = Arc::new(Mutex::new(EventQueue::new()));
@@ -42,8 +58,12 @@ fn main() {
 		let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
 		let mut nes = NES::new(Rc::clone(&cpu), Rc::clone(&mmu), Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&event_queue));
 
-		nes.load_cartridge(&args[1]);
-		nes.reset();
+		nes.load_cartridge(&config.cartridge);
+		if (config.use_entry) {
+			cpu.borrow_mut().set_pc(config.entry);
+		} else {
+			nes.reset();
+		}
 
 		loop {
 			nes.clock();
@@ -51,4 +71,41 @@ fn main() {
 	});
 
 	renderer.event_loop();
+}
+
+fn analyze_arg(config:&mut Configure) {
+	let args:Vec<String> = env::args().collect();
+
+	enum Option {
+		NONE,
+		ENTRY
+	}
+	let mut cnt = 0;
+	let mut option = Option::NONE;
+	for arg in args {
+		if (cnt == 0) {
+			cnt += 1;
+			continue;
+		}
+
+		match &*arg {
+			"--entry" => {
+				option = Option::ENTRY;
+			}
+			_ => {
+				match option {
+					Option::ENTRY => {
+						config.use_entry = true;
+						config.entry = u16::from_str_radix(&arg, 16).unwrap();
+					}
+					Option::NONE => {
+						config.cartridge = arg;
+					}
+				}
+				option = Option::NONE;
+			}
+		}
+
+		cnt += 1;
+	}
 }

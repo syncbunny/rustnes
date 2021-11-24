@@ -86,7 +86,7 @@ impl CPU {
 			x: 0,
 			y: 0,
 			sp: 0xFD,
-			p: 0x34,
+			p: 0x24,
 			pc: 0,
 			clock_remain: 0,
 			reset_flag: false,
@@ -719,6 +719,10 @@ impl CPU {
 		self.nmi_flag = true;
 		self.clock_remain = 0;
 	}
+
+	pub fn set_pc(&mut self, pc:u16) {
+		self.pc = pc;
+	}
 	
 	fn do_reset(&mut self) {
 		println!("cpu:reset");
@@ -751,6 +755,6 @@ impl CPU {
 	}
 
 	fn dump(&self) {
-		println!("CPU:PC={:04X}, A={:02X}, X={:02X}, Y={:02X}, S={:02X}, P={:02X}", self.pc, self.a, self.x, self.y, self.sp, self.p);
+		println!("{:04X} A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}", self.pc, self.a, self.x, self.y, self.p, self.sp);
 	}
 }
