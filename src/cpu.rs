@@ -335,6 +335,18 @@ impl CPU {
 				UPDATE_NZ!(self.y, self.p);
 			}
 		}
+		macro_rules! TYA {
+			() => {
+				self.a = self.y;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! TSX {
+			() => {
+				self.x = self.sp;
+				UPDATE_NZ!(self.x, self.p);
+			}
+		}
 		macro_rules! TXS {
 			() => {
 				self.sp = self.x;
@@ -481,6 +493,25 @@ impl CPU {
 				self.a = new_a;
 				UPDATE_NZ!(self.a, self.p);
 			};
+		}
+		macro_rules! SBC {
+			($ea: expr) => {
+				let m:u8 = mmu.read_1byte($ea);
+				let c:u8 = if self.p & FLG_C != 0 {1} else {0};
+				if self.a >= m {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let new_a:u8 = self.a.wrapping_sub(m);
+				if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
+					SET_V!(self.p);
+				} else {
+					UNSET_V!(self.p);
+				}
+				self.a = new_a;
+				UPDATE_NZ!(self.a, self.p);
+			}
 		}
 		macro_rules! CMP {
 			($ea: expr) => {
@@ -647,6 +678,10 @@ impl CPU {
 			0x78 => { // SEI
 				SEI!();
 			}
+			0x84 => { // STY ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				STY!(ea);
+			}
 			0x85 => { // STA ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				STA!(ea);
@@ -685,6 +720,9 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				STA!(ea);
 			}
+			0x98 => { // TYA
+				TYA!();
+			}
 			0x99 => { // STA Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				STA!(ea);
@@ -722,6 +760,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				LDA!(ea);
 			}
+			0xAE => { // LDX Absolute
+				ABS!(ea, self.pc);
+				LDX!(ea);
+			}
 			0xB0 => { // BCS Relative
 				REL!(ea, self.pc);
 				BCS!(ea);
@@ -740,6 +782,9 @@ impl CPU {
 			0xB9 => { // LDA Abusolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				LDA!(ea);
+			}
+			0xBA => { // TSX
+				TSX!();
 			}
 			0xBD => { // LDA Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -780,6 +825,10 @@ impl CPU {
 			}
 			0xE8 => { // INX
 				INX!();
+			}
+			0xE9 => { // SBC Immediate
+				IMM!(ea, self.pc);
+				SBC!(ea);
 			}
 			0xEA => { // NOP
 			}
