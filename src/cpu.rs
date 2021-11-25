@@ -351,6 +351,11 @@ impl CPU {
 				SET_I!(self.p);
 			}
 		}
+		macro_rules! SED {
+			() => {
+				SET_D!(self.p);
+			}
+		}
 		macro_rules! CLC {
 			() => {
 				UNSET_C!(self.p);
@@ -364,6 +369,11 @@ impl CPU {
 		macro_rules! CLI {
 			() => {
 				UNSET_I!(self.p);
+			};
+		}
+		macro_rules! CLV {
+			() => {
+				UNSET_V!(self.p);
 			};
 		}
 		macro_rules! AND {
@@ -494,6 +504,17 @@ impl CPU {
 				UPDATE_NZ!(self.x.wrapping_sub(m), self.p);
 			};
 		}
+		macro_rules! CPY {
+			($ea: expr) => {
+				let m:u8 = mmu.read_1byte(ea);
+				if self.y >= m {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				UPDATE_NZ!(self.y.wrapping_sub(m), self.p);
+			};
+		}
 		macro_rules! BIT {
 			($ea: expr) => {
 				let mut m:u8 = mmu.read_1byte($ea);
@@ -513,11 +534,27 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! PHP {
+			() => {
+				SET_B!(self.p);
+				PUSH!(self.p);
+			}
+		}
+		macro_rules! PLP {
+			() => {
+				self.p = POP!();
+				UPDATE_NZ!(self.p, self.p);
+			}
+		}
+
 		// read opcode
 		let op:u8 = mmu.read_1byte(self.pc);
 		self.pc += 1;
 
 		match op {
+			0x08 => { // PHP
+				PHP!();
+			}
 			0x09 => { // ORA Immediate
 				IMM!(ea, self.pc);
 				ORA!(ea);
@@ -548,6 +585,9 @@ impl CPU {
 				ZERO_PAGE!(ea, self.pc);
 				ROL!(ea);
 			}
+			0x28 => { // PLP
+				PLP!();
+			}
 			0x29 => { // AND Immediate
 				IMM!(ea, self.pc);
 				AND!(ea);
@@ -571,6 +611,10 @@ impl CPU {
 			}
 			0x48 => { // PHA
 				PHA!();
+			}
+			0x49 => { // EOR Immediate
+				IMM!(ea, self.pc);
+				EOR!(ea);
 			}
 			0x4A => { // LSR A
 				LSR_A!();
@@ -690,6 +734,9 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				LDA!(ea);
 			}
+			0xB8 => { // CLV
+				CLV!();
+			}
 			0xB9 => { // LDA Abusolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				LDA!(ea);
@@ -697,6 +744,10 @@ impl CPU {
 			0xBD => { // LDA Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				LDA!(ea);
+			}
+			0xC0 => { // CPY Immediate
+				IMM!(ea, self.pc);
+				CPY!(ea);
 			}
 			0xC5 => { // CMP ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -735,6 +786,9 @@ impl CPU {
 			0xF0 => { // BEQ Relative
 				REL!(ea, self.pc);
 				BEQ!(ea);
+			}
+			0xF8 => { // SED Implied
+				SED!();
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
