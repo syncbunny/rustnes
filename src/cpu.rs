@@ -468,6 +468,25 @@ impl CPU {
 				UPDATE_NZ!(mm, self.p);
 			}
 		}
+		macro_rules! ROR {
+			($ea: expr) => {
+				let m = mmu.read_1byte($ea);
+				let mut mm = m;
+				mm = m >> 1;
+				mm |= if (self.p & FLG_C) != 0 {
+					0x80
+				} else {
+					0x00
+				};
+				if (m & 0x01) != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				mmu.write($ea, mm);
+				UPDATE_NZ!(mm, self.p);
+			}
+		}
 		macro_rules! INC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
@@ -679,6 +698,10 @@ impl CPU {
 			}
 			0x60 => { // RTS
 				RTS!();
+			}
+			0x66 => { // ROR ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				ROR!(ea);
 			}
 			0x68 => { // PLA
 				PLA!();
