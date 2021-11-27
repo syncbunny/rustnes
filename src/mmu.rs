@@ -205,4 +205,13 @@ impl MMU {
 		let mut queue = self.event_queue.lock().unwrap();
 		queue.push(Event::new(EventType::DMA));
 	}
+
+	pub fn peek_02(&self) -> u8 {
+		return self.wram[0x02];
+	}
+
+	pub fn peek_03(&self) -> u8 {
+		return self.wram[0x03];
+	}
+
 }

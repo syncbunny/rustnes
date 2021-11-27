@@ -140,6 +140,20 @@ impl NES {
 		}
 	}
 
+	pub fn clock_nestest(&mut self) {
+		if self.clock_cpu <= 0 {
+			self.clock();
+			let mmu = self.mmu.borrow_mut();
+			let m2 = mmu.peek_02();
+			let m3 = mmu.peek_03();
+			if m2 != 0 || m3 != 0 {
+				println!("nestest: {:02X}, {:02X}", m2, m3);
+			}
+		} else {
+			self.clock();
+		}
+	}
+
 	pub fn reset(&self) {
 		let mut cpu = self.cpu.borrow_mut();
 		let mut ppu = self.ppu.borrow_mut();

@@ -32,6 +32,7 @@ struct Configure {
 	cartridge: String,
 	use_entry: bool,
 	entry: u16,
+	nestest: bool,
 }
 
 fn main() {
@@ -39,6 +40,7 @@ fn main() {
 		cartridge: "".to_string(),
 		use_entry: false,
 		entry: 0,
+		nestest: false,
 	};
 	analyze_arg(&mut config);
 	if (config.cartridge.is_empty()) {
@@ -59,14 +61,20 @@ fn main() {
 		let mut nes = NES::new(Rc::clone(&cpu), Rc::clone(&mmu), Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&event_queue));
 
 		nes.load_cartridge(&config.cartridge);
-		if (config.use_entry) {
+		if config.use_entry | config.nestest {
 			cpu.borrow_mut().set_pc(config.entry);
 		} else {
 			nes.reset();
 		}
 
-		loop {
-			nes.clock();
+		if config.nestest {
+			loop {
+				nes.clock_nestest();
+			}
+		} else {
+			loop {
+				nes.clock();
+			}
 		}
 	});
 
@@ -91,6 +99,12 @@ fn analyze_arg(config:&mut Configure) {
 		match &*arg {
 			"--entry" => {
 				option = Option::ENTRY;
+			}
+			"--nestest" => {
+				config.use_entry = true;
+				config.entry = 0xC000;
+				config.nestest = true;
+				option = Option::NONE;
 			}
 			_ => {
 				match option {
