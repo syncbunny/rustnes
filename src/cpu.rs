@@ -2,8 +2,11 @@ use std::cell::RefCell;
 use std::rc::Rc; 
 use crate::mmu::*;
 
-const NMI_VECTOR: u16 = 0xFFFA;
+const NMI_VECTOR:   u16 = 0xFFFA;
 const RESET_VECTOR: u16 = 0xFFFC;
+const IRQ_VECTOR:   u16 = 0xFFFE;
+const BRK_VECTOR:   u16 = 0xFFFE;
+
 const FLG_C: u8 =  0x01;
 const FLG_Z: u8 =  0x02;
 const FLG_I: u8 =  0x04;
@@ -567,14 +570,24 @@ impl CPU {
 		}
 		macro_rules! PHP {
 			() => {
-				SET_B!(self.p);
-				PUSH!(self.p);
+				PUSH!(self.p | FLG_B);
 			}
 		}
 		macro_rules! PLP {
 			() => {
 				self.p = POP!();
-				UPDATE_NZ!(self.p, self.p);
+			}
+		}
+		macro_rules! BRK {
+			() => {
+				if (self.p & FLG_I) == 0 {
+					SET_B!(self.p);
+					self.pc += 1;
+					mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
+					PUSH!(self.p);
+					SET_I!(self.p);
+					self.pc = mmu.read_2bytes(RESET_VECTOR);
+				}
 			}
 		}
 
@@ -583,6 +596,9 @@ impl CPU {
 		self.pc += 1;
 
 		match op {
+			0x00 => { // BRK
+				BRK!();
+			}
 			0x08 => { // PHP
 				PHP!();
 			}
