@@ -244,7 +244,7 @@ impl CPU {
 		}
 		macro_rules! JSR {
 			($ea:expr) => {
-				mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
+				mmu.push_2bytes(0x0100 + self.sp as u16, self.pc -1);
 				self.sp -= 2;
 				self.pc = $ea;
 			}
@@ -309,6 +309,7 @@ impl CPU {
 		macro_rules! RTS {
 			() => {
 				self.pc = mmu.pop_2bytes(0x0100 + self.sp as u16);
+				self.pc += 1;
 				self.sp += 2;
 			}
 		}
@@ -421,6 +422,19 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! LSR {
+			($ea: expr) => {
+				let m = mmu.read_1byte($ea);
+				if m & 0x01 == 0 {
+					UNSET_C!(self.p);
+				} else {
+					SET_C!(self.p);
+				}
+				let m = m >> 1;
+				mmu.write($ea, m);
+				UPDATE_NZ!(m, self.p);
+			}
+		}
 		macro_rules! ASL_A {
 			() => {
 				if self.a & 0x80 == 0 {
@@ -468,6 +482,23 @@ impl CPU {
 				UPDATE_NZ!(mm, self.p);
 			}
 		}
+		macro_rules! ROR_A {
+			() => {
+				let a = self.a;
+				self.a >>= 1;
+				self.a |= if (self.p & FLG_C) != 0 {
+					0x80
+				} else {
+					0x00
+				};
+				if (a & 0x01) != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
 		macro_rules! ROR {
 			($ea: expr) => {
 				let m = mmu.read_1byte($ea);
@@ -492,6 +523,14 @@ impl CPU {
 				let m:u8 = mmu.read_1byte($ea);
 				mmu.write($ea, m+1);
 				UPDATE_NZ!(m+1, self.p);
+			}
+		}
+		macro_rules! DEC {
+			($ea: expr) => {
+				let mut m:u8 = mmu.read_1byte($ea);
+				m = m.wrapping_sub(1);
+				mmu.write($ea, m);
+				UPDATE_NZ!(m, self.p);
 			}
 		}
 		macro_rules! ADC {
@@ -618,6 +657,14 @@ impl CPU {
 			0x00 => { // BRK
 				BRK!();
 			}
+			0x01 => { // ORA Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				ORA!(ea);
+			}
+			0x05 => { // ORA ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				ORA!(ea);
+			}
 			0x08 => { // PHP
 				PHP!();
 			}
@@ -638,6 +685,10 @@ impl CPU {
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
+			}
+			0x21 => { // AND Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				AND!(ea);
 			}
 			0x24 => { // BIT Zeropage
 				ZERO_PAGE!(ea, self.pc);
@@ -671,9 +722,17 @@ impl CPU {
 			0x40 => { // RTI
 				RTI!();
 			}
+			0x41 => { // EOR Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				EOR!(ea);
+			}
 			0x45 => { // EOR ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				EOR!(ea);
+			}
+			0x46 => { // LSR ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				LSR!(ea);
 			}
 			0x48 => { // PHA
 				PHA!();
@@ -699,6 +758,14 @@ impl CPU {
 			0x60 => { // RTS
 				RTS!();
 			}
+			0x61 => { // ADC Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				ADC!(ea);
+			}
+			0x65 => { // ADC ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				ADC!(ea);
+			}
 			0x66 => { // ROR ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				ROR!(ea);
@@ -710,12 +777,19 @@ impl CPU {
 				IMM!(ea, self.pc);
 				ADC!(ea);
 			}
+			0x6A => { // ROR Accumulator
+				ROR_A!();
+			}
 			0x70 => { // BVS Relative
 				REL!(ea, self.pc);
 				BVS!(ea);
 			}
 			0x78 => { // SEI
 				SEI!();
+			}
+			0x81 => { // STA Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				STA!(ea);
 			}
 			0x84 => { // STY ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -781,9 +855,17 @@ impl CPU {
 				IMM!(ea, self.pc);
 				LDX!(ea);
 			}
+			0xA4 => { // LDY ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				LDY!(ea);
+			}
 			0xA5 => { // LDA ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				LDA!(ea);
+			}
+			0xA6 => { // LDX ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				LDX!(ea);
 			}
 			0xA8 => { // TAY
 				TAY!();
@@ -833,6 +915,14 @@ impl CPU {
 				IMM!(ea, self.pc);
 				CPY!(ea);
 			}
+			0xC1 => { // CMP Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				CMP!(ea);
+			}
+			0xC4 => { // CPY ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				CPY!(ea);
+			}
 			0xC5 => { // CMP ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				CMP!(ea);
@@ -847,6 +937,10 @@ impl CPU {
 			0xCA => { // DEX
 				DEX!();
 			}
+			0xCE => { // DEC Absolute
+				ABS!(ea, self.pc);
+				DEC!(ea);
+			}
 			0xD0 => { // BNE Relative
 				REL!(ea, self.pc);
 				BNE!(ea);
@@ -854,9 +948,25 @@ impl CPU {
 			0xD8 => { // CLD
 				CLD!();
 			}
+			0xDD => { // CMP Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				CMP!(ea);
+			}
 			0xE0 => { // CPX Immediate
 				IMM!(ea, self.pc);
 				CPX!(ea);
+			}
+			0xE1 => { // SBC Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				SBC!(ea);
+			}
+			0xE4 => { // CPX ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				CPX!(ea);
+			}
+			0xE5 => { // SBC ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				SBC!(ea);
 			}
 			0xE6 => { // INC ZeroPage
 				ZERO_PAGE!(ea, self.pc);
