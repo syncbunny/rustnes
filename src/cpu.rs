@@ -758,6 +758,10 @@ impl CPU {
 				REL!(ea, self.pc);
 				BMI!(ea);
 			}
+			0x31 => { // AND Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				AND!(ea);
+			}
 			0x38 => { // SEC
 				SEC!();
 			}
@@ -802,6 +806,10 @@ impl CPU {
 				REL!(ea, self.pc);
 				BVC!(ea);
 			}
+			0x51 => { // EOR Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				EOR!(ea);
+			}
 			0x58 => { // CLI
 				CLI!();
 			}
@@ -841,6 +849,10 @@ impl CPU {
 			0x70 => { // BVS Relative
 				REL!(ea, self.pc);
 				BVS!(ea);
+			}
+			0x71 => { // ADC Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				ADC!(ea);
 			}
 			0x78 => { // SEI
 				SEI!();
@@ -1019,6 +1031,10 @@ impl CPU {
 				REL!(ea, self.pc);
 				BNE!(ea);
 			}
+			0xD1 => { // CMP Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				CMP!(ea);
+			}
 			0xD8 => { // CLD
 				CLD!();
 			}
@@ -1070,6 +1086,10 @@ impl CPU {
 			0xF0 => { // BEQ Relative
 				REL!(ea, self.pc);
 				BEQ!(ea);
+			}
+			0xF1 => { // SBC Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				SBC!(ea);
 			}
 			0xF8 => { // SED Implied
 				SED!();
