@@ -107,7 +107,8 @@ impl MMU {
 		let z = self.read_1byte(addr);
 
 		let mut p:u16 = self.read_1byte(z as u16) as u16;
-		p |= (self.read_1byte((z+1) as u16) as u16) << 8;
+		let z = z.wrapping_add(1);
+		p |= (self.read_1byte(z as u16) as u16) << 8;
 		p = p.wrapping_add(y as u16);
 
 		return p;

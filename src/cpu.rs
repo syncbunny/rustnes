@@ -446,6 +446,19 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! ASL {
+			($ea: expr) => {
+				let m = mmu.read_1byte($ea);
+				if m & 0x80 == 0 {
+					UNSET_C!(self.p);
+				} else {
+					SET_C!(self.p);
+				}
+				let m = m << 1;
+				mmu.write($ea, m);
+				UPDATE_NZ!(m, self.p);
+			}
+		}
 		macro_rules! ROL_A {
 			() => {
 				let a = self.a;
@@ -521,7 +534,8 @@ impl CPU {
 		macro_rules! INC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
-				mmu.write($ea, m+1);
+				let m = m.wrapping_add(1);
+				mmu.write($ea, m);
 				UPDATE_NZ!(m+1, self.p);
 			}
 		}
@@ -665,6 +679,10 @@ impl CPU {
 				ZERO_PAGE!(ea, self.pc);
 				ORA!(ea);
 			}
+			0x06 => { // ASL ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				ASL!(ea);
+			}
 			0x08 => { // PHP
 				PHP!();
 			}
@@ -675,9 +693,21 @@ impl CPU {
 			0x0A => { // ASL Accumurator
 				ASL_A!();
 			}
+			0x0D => { // ORA Absolute
+				ABS!(ea, self.pc);
+				ORA!(ea);
+			}
+			0x0E => { // ASL Absolute
+				ABS!(ea, self.pc);
+				ASL!(ea);
+			}
 			0x10 => { // BPL Relative
 				REL!(ea, self.pc);
 				BPL!(ea);
+			}
+			0x11 => { // ORA Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				ORA!(ea);
 			}
 			0x18 => { // CLC
 				CLC!();
@@ -711,6 +741,18 @@ impl CPU {
 			}
 			0x2A => { // ROL Accumurator
 				ROL_A!();
+			}
+			0x2C => { // BIT Absolute
+				ABS!(ea, self.pc);
+				BIT!(ea);
+			}
+			0x2D => { // AND Absolute
+				ABS!(ea, self.pc);
+				AND!(ea);
+			}
+			0x2E => { // ROL Absolute
+				ABS!(ea, self.pc);
+				ROL!(ea);
 			}
 			0x30 => { // BMI Relative
 				REL!(ea, self.pc);
@@ -748,6 +790,14 @@ impl CPU {
 				ABS!(ea, self.pc);
 				JMP!(ea);
 			}
+			0x4D => { // EOR Absolute
+				ABS!(ea, self.pc);
+				EOR!(ea);	
+			}
+			0x4E => { // LSR Absolute
+				ABS!(ea, self.pc);
+				LSR!(ea);
+			}
 			0x50 => { // BVC Relative
 				REL!(ea, self.pc);
 				BVC!(ea);
@@ -779,6 +829,14 @@ impl CPU {
 			}
 			0x6A => { // ROR Accumulator
 				ROR_A!();
+			}
+			0x6D => { // ADC Absolute
+				ABS!(ea, self.pc);
+				ADC!(ea);
+			}
+			0x6E => { // ROR Absolute
+				ABS!(ea, self.pc);
+				ROR!(ea);
 			}
 			0x70 => { // BVS Relative
 				REL!(ea, self.pc);
@@ -877,6 +935,10 @@ impl CPU {
 			0xAA => { // TAX
 				TAX!();
 			}
+			0xAC => { // LDY Absolute
+				ABS!(ea, self.pc);
+				LDY!(ea);
+			}
 			0xAD => { // LDA Absolute
 				ABS!(ea, self.pc);
 				LDA!(ea);
@@ -927,6 +989,10 @@ impl CPU {
 				ZERO_PAGE!(ea, self.pc);
 				CMP!(ea);
 			}
+			0xC6 => { // DEC ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				DEC!(ea);
+			}
 			0xC8 => { // INY
 				INY!();
 			}
@@ -936,6 +1002,14 @@ impl CPU {
 			}
 			0xCA => { // DEX
 				DEX!();
+			}
+			0xCC => { // CPY Absolute
+				ABS!(ea, self.pc);
+				CPY!(ea);
+			}
+			0xCD => { // CMP Absolute
+				ABS!(ea, self.pc);
+				CMP!(ea);
 			}
 			0xCE => { // DEC Absolute
 				ABS!(ea, self.pc);
@@ -980,6 +1054,18 @@ impl CPU {
 				SBC!(ea);
 			}
 			0xEA => { // NOP
+			}
+			0xEC => { // CPX Absolute
+				ABS!(ea, self.pc);
+				CPX!(ea);
+			}
+			0xED => { // SBC Absolute
+				ABS!(ea, self.pc);
+				SBC!(ea);
+			}
+			0xEE => { // INC Absolute
+				ABS!(ea, self.pc);
+				INC!(ea);
 			}
 			0xF0 => { // BEQ Relative
 				REL!(ea, self.pc);
