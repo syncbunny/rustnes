@@ -718,6 +718,14 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				ORA!(ea);
 			}
+			0x15 => { // ORA ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				ORA!(ea);
+			}
+			0x16 => { // ASL ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				ASL!(ea);
+			}
 			0x18 => { // CLC
 				CLC!();
 			}
@@ -775,6 +783,14 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				AND!(ea);
 			}
+			0x35 => { // AND ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				AND!(ea);
+			}
+			0x36 => { // ROL ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				ROL!(ea);
+			}
 			0x38 => { // SEC
 				SEC!();
 			}
@@ -826,6 +842,14 @@ impl CPU {
 			0x51 => { // EOR Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				EOR!(ea);
+			}
+			0x55 => { // EOR ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				EOR!(ea);
+			}
+			0x56 => { // LSR ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				LSR!(ea);
 			}
 			0x58 => { // CLI
 				CLI!();
@@ -879,6 +903,14 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				ADC!(ea);
 			}
+			0x75 => { // ADC ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				ADC!(ea);
+			}
+			0x76 => { // ROR ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				ROR!(ea);
+			}
 			0x78 => { // SEI
 				SEI!();
 			}
@@ -931,6 +963,10 @@ impl CPU {
 			0x91 => { // STA Indirect Y
 				INDIRECT_Y!(ea, self.pc);
 				STA!(ea);
+			}
+			0x94 => { // STY ZeroPage,X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				STY!(ea);
 			}
 			0x95 => { // STA ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -1000,9 +1036,17 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				LDA!(ea);
 			}
+			0xB4 => { // LDY ZeroPage,X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				LDY!(ea);
+			}
 			0xB5 => { // LDA ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				LDA!(ea);
+			}
+			0xB6 => { // LDX ZeroPage, Y
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.y);
+				LDX!(ea);
 			}
 			0xB8 => { // CLV
 				CLV!();
@@ -1068,6 +1112,14 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				CMP!(ea);
 			}
+			0xD5 => { // CMP ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				CMP!(ea);
+			}
+			0xD6 => { // DEC ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				DEC!(ea);
+			}
 			0xD8 => { // CLD
 				CLD!();
 			}
@@ -1127,6 +1179,14 @@ impl CPU {
 			0xF1 => { // SBC Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				SBC!(ea);
+			}
+			0xF5 => { // SBC ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				SBC!(ea);
+			}
+			0xF6 => { // INC ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				INC!(ea);
 			}
 			0xF8 => { // SED Implied
 				SED!();
