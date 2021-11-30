@@ -11,6 +11,7 @@ const CR1_NAMETABLE_MASK: u8 = 0x02;
 
 /* Control Regster1 &H2000 */
 const FLAG_NMI_ON_VB: u8 = 0x80;
+const FLAG_ADDR_INC: u8 = 0x04; // 0: +1, 1: +32
 
 /* Status Register &H2002 */
 const FLAG_VBLANK: u8 = 0x80;
@@ -47,6 +48,8 @@ pub struct PPU {
 	line: u32,
 	line_clock: u32,
 
+	write_mode: u8, // 0 or 1
+	write_addr: u16,
 	mem: Vec<u8>,
 	sprite_mem: Vec<u8>,
 
@@ -66,6 +69,8 @@ impl PPU {
 			line: 0,
 			line_clock: 0,
 
+			write_mode: 0,
+			write_addr: 0,
 			mem: vec![0; 0x4000],
 			sprite_mem: vec![0; 256],
 
@@ -120,11 +125,36 @@ impl PPU {
 	}
 
 	pub fn set_write_addr(&mut self, v:u8) {
-		// TODO
+		if self.write_mode == 0 {
+			self.write_addr &= 0x00FF;
+			self.write_addr |= (v as u16) << 8;
+
+			self.write_mode = 1;
+		} else {
+			self.write_addr &= 0xFF00;
+			self.write_addr |= (v as u16);
+
+			self.write_mode = 0;
+		}
 	}
 
 	pub fn write(&mut self, v:u8) {
-		// TODO
+		let addr = self.write_addr & 0x3FFF;
+		let mut v = v;
+
+		// background pallet or sprite pallet
+		if addr >= 0x3F00 && addr <= 0x3FFF {
+			v &= 0x3F;
+		}
+
+		self.mem[addr as usize] = v;
+
+		// Increment write address
+		if self.cr1 & FLAG_ADDR_INC == 0 {
+			self.write_addr += 1;
+		} else {
+			self.write_addr += 32;
+		}
 	}
 
 	fn start_VR(&mut self) {
@@ -155,6 +185,11 @@ impl PPU {
 		// TODO: add scroll offset
 
 		// calc nametable address
+		//  +-----------+-----------+
+		//  | 2 ($2800) | 3 ($2C00) |
+		//  +-----------+-----------+
+		//  | 0 ($2000) | 1 ($2400) |
+		//  +-----------+-----------+
 		let nametable_base:[u32;4] = [
 			0x2000, 0x2400, 0x2800, 0x2C00
 		];
