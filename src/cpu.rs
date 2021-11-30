@@ -48,22 +48,22 @@ macro_rules! UPDATE_NZ { ($x: expr, $p: expr) => { UPDATE_N!($x, $p); UPDATE_Z!(
 
 const CLOCK_TABLE: [u8;256] = [
         /* xx    00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F */
-        /*  0 */  1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 0, 3, 3, 0,
-        /* 10 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
+        /*  0 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 4, 3, 3, 0,
+        /* 10 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
         /* 20 */  3, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 30 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
-        /* 40 */  1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 50 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
-        /* 60 */  1, 2, 0, 0, 0, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 70 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
+        /* 30 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* 40 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+        /* 50 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* 60 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+        /* 70 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
         /* 80 */  0, 2, 0, 0, 2, 2, 2, 0, 1, 0, 1, 0, 3, 3, 3, 0,
         /* 90 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 0, 3, 0, 0,
         /* a0 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         /* b0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
         /* c0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* d0 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
+        /* d0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
         /* e0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* f0 */  2, 2, 0, 0, 0, 2, 2, 0, 1, 3, 0, 0, 0, 3, 3, 0,
+        /* f0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
 ];
 
 pub struct CPU {
@@ -684,6 +684,10 @@ impl CPU {
 				INDIRECT_X!(ea, self.pc);
 				ORA!(ea);
 			}
+			0x04 => { // NOP ZeroPage (Undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				// NOP
+			}
 			0x05 => { // ORA ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				ORA!(ea);
@@ -702,6 +706,10 @@ impl CPU {
 			0x0A => { // ASL Accumurator
 				ASL_A!();
 			}
+			0x0C => { // NOP Absolute (Undocumented)
+				ABS!(ea, self.pc);
+				// NOP
+			}
 			0x0D => { // ORA Absolute
 				ABS!(ea, self.pc);
 				ORA!(ea);
@@ -718,6 +726,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				ORA!(ea);
 			}
+			0x14 => { // NOP ZeroPage, X (Undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				// NOP
+			}
 			0x15 => { // ORA ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				ORA!(ea);
@@ -732,6 +744,8 @@ impl CPU {
 			0x19 => { // ORA Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				ORA!(ea);
+			}
+			0x1A => { // NOP (undocumented)
 			}
 			0x1D => { // ORA Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -791,6 +805,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				AND!(ea);
 			}
+			0x34 => { // NOP ZeroPage, X (Undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				// NOP
+			}
 			0x35 => { // AND ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				AND!(ea);
@@ -806,6 +824,8 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.y);
 				AND!(ea);
 			}
+			0x3A => { // NOP (undocumented)
+			}
 			0x3D => { // AND Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				AND!(ea);
@@ -820,6 +840,10 @@ impl CPU {
 			0x41 => { // EOR Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				EOR!(ea);
+			}
+			0x44 => { // NOP ZeroPage (Undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				// NOP
 			}
 			0x45 => { // EOR ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -859,6 +883,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				EOR!(ea);
 			}
+			0x54 => { // NOP ZeroPage, X (Undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				// NOP
+			}
 			0x55 => { // EOR ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				EOR!(ea);
@@ -874,6 +902,8 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.y);
 				EOR!(ea);
 			}
+			0x5A => { // NOP (undocumented)
+			}
 			0x5D => { // EOR Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				EOR!(ea);
@@ -888,6 +918,10 @@ impl CPU {
 			0x61 => { // ADC Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				ADC!(ea);
+			}
+			0x64 => { // NOP ZeroPage (Undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				// NOP
 			}
 			0x65 => { // ADC ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -927,6 +961,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				ADC!(ea);
 			}
+			0x74 => { // NOP ZeroPage, X (Undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				// NOP
+			}
 			0x75 => { // ADC ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				ADC!(ea);
@@ -941,6 +979,8 @@ impl CPU {
 			0x79 => { // ADC Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				ADC!(ea);
+			}
+			0x7A => { // NOP (undocumented)
 			}
 			0x7D => { // ADC Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1102,6 +1142,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				LDA!(ea);
 			}
+			0xBE => { // LDX Abusolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				LDX!(ea);
+			}
 			0xC0 => { // CPY Immediate
 				IMM!(ea, self.pc);
 				CPY!(ea);
@@ -1152,6 +1196,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				CMP!(ea);
 			}
+			0xD4 => { // NOP ZeroPage, X (Undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				// NOP
+			}
 			0xD5 => { // CMP ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				CMP!(ea);
@@ -1166,6 +1214,8 @@ impl CPU {
 			0xD9 => { // CMP Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				CMP!(ea);
+			}
+			0xDA => { // NOP (undocumented)
 			}
 			0xDD => { // CMP Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1224,6 +1274,10 @@ impl CPU {
 				INDIRECT_Y!(ea, self.pc);
 				SBC!(ea);
 			}
+			0xF4 => { // NOP ZeroPage, X (Undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				// NOP
+			}
 			0xF5 => { // SBC ZeroPage, X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				SBC!(ea);
@@ -1238,6 +1292,8 @@ impl CPU {
 			0xF9 => { // SBC Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				SBC!(ea);
+			}
+			0xFA => { // NOP (undocumented)
 			}
 			0xFD => { // SBC Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
