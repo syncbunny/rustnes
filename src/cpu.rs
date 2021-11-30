@@ -167,6 +167,12 @@ impl CPU {
 				$ea = $pc.wrapping_add(m as u16);
 			}
 		}
+		macro_rules! INDIRECT {
+			($ea: expr, $pc: expr) => {
+				$ea = mmu.indirect(self.pc);
+				$pc += 2;
+			}
+		}
 		macro_rules! INDIRECT_X {
 			($ea: expr, $pc: expr) => {
 				$ea = mmu.indirect_x(self.pc, self.x);
@@ -838,6 +844,10 @@ impl CPU {
 			0x6A => { // ROR Accumulator
 				ROR_A!();
 			}
+			0x6C => { // JMP Indirect
+				INDIRECT!(ea, self.pc);
+				JMP!(ea);
+			}
 			0x6D => { // ADC Absolute
 				ABS!(ea, self.pc);
 				ADC!(ea);
@@ -856,6 +866,10 @@ impl CPU {
 			}
 			0x78 => { // SEI
 				SEI!();
+			}
+			0x7E => { // ROR Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				ROR!(ea);
 			}
 			0x81 => { // STA Indirect, X
 				INDIRECT_X!(ea, self.pc);

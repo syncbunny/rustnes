@@ -94,6 +94,20 @@ impl MMU {
 		return ret;
 	}
 
+	pub fn indirect(&self, addr: u16) -> u16 {
+		let mut ret:u16;
+
+		ret = self.read_1byte(addr) as u16;
+		let addr = if addr & 0xFF == 0xFF {
+			addr & 0xFF00
+		} else {
+			addr + 1
+		};
+		ret |= (self.read_1byte(addr) as u16) << 8;
+
+		return ret;
+	}
+
 	pub fn indirect_x(&self, addr: u16, x: u8) -> u16 {
         	let z:u8 = self.read_1byte(addr).wrapping_add(x);
 		let z = z.wrapping_add(1);
