@@ -49,21 +49,21 @@ macro_rules! UPDATE_NZ { ($x: expr, $p: expr) => { UPDATE_N!($x, $p); UPDATE_Z!(
 const CLOCK_TABLE: [u8;256] = [
         /* xx    00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F */
         /*  0 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 4, 3, 3, 0,
-        /* 10 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* 10 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* 20 */  3, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 30 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* 30 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* 40 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 50 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* 50 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* 60 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 70 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
-        /* 80 */  0, 2, 0, 0, 2, 2, 2, 0, 1, 0, 1, 0, 3, 3, 3, 0,
+        /* 70 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
+        /* 80 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         /* 90 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 0, 3, 0, 0,
         /* a0 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         /* b0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
-        /* c0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* d0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* c0 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
+        /* d0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* e0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* f0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 0, 3, 3, 0,
+        /* f0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
 ];
 
 pub struct CPU {
@@ -747,6 +747,9 @@ impl CPU {
 			}
 			0x1A => { // NOP (undocumented)
 			}
+			0x1C => { // NOP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+			}
 			0x1D => { // ORA Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ORA!(ea);
@@ -826,6 +829,9 @@ impl CPU {
 			}
 			0x3A => { // NOP (undocumented)
 			}
+			0x3C => { // NOP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+			}
 			0x3D => { // AND Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				AND!(ea);
@@ -903,6 +909,9 @@ impl CPU {
 				EOR!(ea);
 			}
 			0x5A => { // NOP (undocumented)
+			}
+			0x5C => { // NOP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
 			}
 			0x5D => { // EOR Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -982,6 +991,9 @@ impl CPU {
 			}
 			0x7A => { // NOP (undocumented)
 			}
+			0x7C => { // NOP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+			}
 			0x7D => { // ADC Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ADC!(ea);
@@ -990,9 +1002,15 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ROR!(ea);
 			}
+			0x80 => { // NOP Immediate (undocumented)
+				IMM!(ea, self.pc);
+			}
 			0x81 => { // STA Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				STA!(ea);
+			}
+			0x82 => { // NOP Immediate (undocumented)
+				IMM!(ea, self.pc);
 			}
 			0x84 => { // STY ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -1008,6 +1026,9 @@ impl CPU {
 			}
 			0x88 => { // DEY
 				DEY!();
+			}
+			0x89 => { // NOP Immediate (undocumented)
+				IMM!(ea, self.pc);
 			}
 			0x8A => { // TXA
 				TXA!();
@@ -1154,6 +1175,9 @@ impl CPU {
 				INDIRECT_X!(ea, self.pc);
 				CMP!(ea);
 			}
+			0xC2 => { // NOP Immediate (undocumented)
+				IMM!(ea, self.pc);
+			}
 			0xC4 => { // CPY ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				CPY!(ea);
@@ -1216,6 +1240,9 @@ impl CPU {
 				CMP!(ea);
 			}
 			0xDA => { // NOP (undocumented)
+			}
+			0xDC => { // NOP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
 			}
 			0xDD => { // CMP Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1294,6 +1321,9 @@ impl CPU {
 				SBC!(ea);
 			}
 			0xFA => { // NOP (undocumented)
+			}
+			0xFC => { // NOP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
 			}
 			0xFD => { // SBC Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
