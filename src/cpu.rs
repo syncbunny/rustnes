@@ -733,6 +733,14 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.y);
 				ORA!(ea);
 			}
+			0x1D => { // ORA Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				ORA!(ea);
+			}
+			0x1E => { // ASL Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				ASL!(ea);
+			}
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
@@ -798,6 +806,14 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.y);
 				AND!(ea);
 			}
+			0x3D => { // AND Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				AND!(ea);
+			}
+			0x3E => { // ROL Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				ROL!(ea);
+			}
 			0x40 => { // RTI
 				RTI!();
 			}
@@ -857,6 +873,14 @@ impl CPU {
 			0x59 => { // EOR Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				EOR!(ea);
+			}
+			0x5D => { // EOR Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				EOR!(ea);
+			}
+			0x5E => { // LSR Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				LSR!(ea);
 			}
 			0x60 => { // RTS
 				RTS!();
@@ -918,6 +942,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.y);
 				ADC!(ea);
 			}
+			0x7D => { // ADC Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				ADC!(ea);
+			}
 			0x7E => { // ROR Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ROR!(ea);
@@ -972,6 +1000,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				STA!(ea);
 			}
+			0x96 => { // STX ZeroPage, Y
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.y);
+				STX!(ea);
+			}
 			0x98 => { // TYA
 				TYA!();
 			}
@@ -981,6 +1013,10 @@ impl CPU {
 			}
 			0x9A => { // TXS
 				TXS!();
+			}
+			0x9D => { // STA Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				STA!(ea);
 			}
 			0xA0 => { // LDY Immediate
 				IMM!(ea, self.pc);
@@ -1058,6 +1094,10 @@ impl CPU {
 			0xBA => { // TSX
 				TSX!();
 			}
+			0xBC => { // LDY Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				LDY!(ea);
+			}
 			0xBD => { // LDA Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				LDA!(ea);
@@ -1131,6 +1171,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				CMP!(ea);
 			}
+			0xDE => { // DEC Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				DEC!(ea);
+			}
 			0xE0 => { // CPX Immediate
 				IMM!(ea, self.pc);
 				CPX!(ea);
@@ -1194,6 +1238,14 @@ impl CPU {
 			0xF9 => { // SBC Absolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				SBC!(ea);
+			}
+			0xFD => { // SBC Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				SBC!(ea);
+			}
+			0xFE => { // INC Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				INC!(ea);
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
