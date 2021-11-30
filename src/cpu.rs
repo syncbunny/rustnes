@@ -585,7 +585,8 @@ impl CPU {
 					UNSET_C!(self.p);
 				}
 				let new_a:u8 = self.a.wrapping_sub(m);
-				if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
+				let new_a:u8 = new_a.wrapping_sub(c);
+				if ((self.a ^ m) & (self.a ^ new_a) & 0x80) == 0x80 {
 					SET_V!(self.p);
 				} else {
 					UNSET_V!(self.p);
