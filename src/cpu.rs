@@ -721,6 +721,10 @@ impl CPU {
 			0x18 => { // CLC
 				CLC!();
 			}
+			0x19 => { // ORA Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				ORA!(ea);
+			}
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
@@ -774,6 +778,10 @@ impl CPU {
 			0x38 => { // SEC
 				SEC!();
 			}
+			0x39 => { // AND Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				AND!(ea);
+			}
 			0x40 => { // RTI
 				RTI!();
 			}
@@ -822,6 +830,10 @@ impl CPU {
 			0x58 => { // CLI
 				CLI!();
 			}
+			0x59 => { // EOR Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				EOR!(ea);
+			}
 			0x60 => { // RTS
 				RTS!();
 			}
@@ -869,6 +881,10 @@ impl CPU {
 			}
 			0x78 => { // SEI
 				SEI!();
+			}
+			0x79 => { // ADC Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				ADC!(ea);
 			}
 			0x7E => { // ROR Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1055,6 +1071,10 @@ impl CPU {
 			0xD8 => { // CLD
 				CLD!();
 			}
+			0xD9 => { // CMP Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				CMP!(ea);
+			}
 			0xDD => { // CMP Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				CMP!(ea);
@@ -1110,6 +1130,10 @@ impl CPU {
 			}
 			0xF8 => { // SED Implied
 				SED!();
+			}
+			0xF9 => { // SBC Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				SBC!(ea);
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
