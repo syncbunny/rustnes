@@ -95,8 +95,9 @@ impl MMU {
 	}
 
 	pub fn indirect(&self, addr: u16) -> u16 {
-		let mut ret:u16;
+		let addr = self.read_2bytes(addr);
 
+		let mut ret:u16;
 		ret = self.read_1byte(addr) as u16;
 		let addr = if addr & 0xFF == 0xFF {
 			addr & 0xFF00

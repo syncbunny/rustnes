@@ -143,7 +143,9 @@ impl CPU {
 		}
 		macro_rules! ABS_INDEXED {
 			($ea: expr, $pc: expr, $i: expr) => {
-				$ea = mmu.read_2bytes(self.pc) + ($i as u16);
+				let m = mmu.read_2bytes(self.pc);
+				let m: u16 = m.wrapping_add($i as u16);
+				$ea = m;
 				$pc = self.pc + 2;
 			}
 		}
@@ -156,7 +158,7 @@ impl CPU {
 		macro_rules! ZERO_PAGE_INDEXED {
 			($ea: expr, $pc: expr, $i: expr) => {
 				$ea = mmu.read_1byte(self.pc) as u16;
-				$ea += $i as u16;
+				$ea = $ea.wrapping_add($i as u16);
 				$pc = self.pc + 1;
 			}
 		}
