@@ -58,8 +58,8 @@ const CLOCK_TABLE: [u8;256] = [
         /* 70 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* 80 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         /* 90 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 0, 3, 0, 0,
-        /* a0 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* b0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 3, 3, 3, 0,
+        /* a0 */  2, 2, 2, 6, 2, 2, 2, 3, 1, 2, 1, 0, 3, 3, 3, 4,
+        /* b0 */  2, 2, 5, 0, 2, 2, 2, 4, 1, 3, 1, 0, 3, 3, 3, 4,
         /* c0 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         /* d0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* e0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
@@ -273,6 +273,13 @@ impl CPU {
 			($ea:expr) => {
 				self.y = mmu.read_1byte($ea);
 				UPDATE_NZ!(self.y, self.p);
+			}
+		}
+		macro_rules! LAX {
+			($ea:expr) => {
+				self.x = mmu.read_1byte($ea);
+				self.a = self.a;
+				UPDATE_NZ!(self.a, self.p);
 			}
 		}
 		macro_rules! STA {
@@ -1091,6 +1098,10 @@ impl CPU {
 				IMM!(ea, self.pc);
 				LDX!(ea);
 			}
+			0xA3 => { // LAX Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				LAX!(ea);
+			}
 			0xA4 => { // LDY ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				LDY!(ea);
@@ -1102,6 +1113,10 @@ impl CPU {
 			0xA6 => { // LDX ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				LDX!(ea);
+			}
+			0xA7 => { // LAX ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				LAX!(ea);
 			}
 			0xA8 => { // TAY
 				TAY!();
@@ -1125,6 +1140,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				LDX!(ea);
 			}
+			0xAF => { // LAX Absolute (undocumented)
+				ABS!(ea, self.pc);
+				LAX!(ea);
+			}
 			0xB0 => { // BCS Relative
 				REL!(ea, self.pc);
 				BCS!(ea);
@@ -1132,6 +1151,10 @@ impl CPU {
 			0xB1 => { // LDA Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				LDA!(ea);
+			}
+			0xB3 => { // LAX Indirect, Y (undocumented)
+				INDIRECT_Y!(ea, self.pc);
+				LAX!(ea);
 			}
 			0xB4 => { // LDY ZeroPage,X
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -1144,6 +1167,10 @@ impl CPU {
 			0xB6 => { // LDX ZeroPage, Y
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.y);
 				LDX!(ea);
+			}
+			0xB7 => { // LAX ZeroPage, Y (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.y);
+				LAX!(ea);
 			}
 			0xB8 => { // CLV
 				CLV!();
@@ -1166,6 +1193,10 @@ impl CPU {
 			0xBE => { // LDX Abusolute, Y
 				ABS_INDEXED!(ea, self.pc, self.y);
 				LDX!(ea);
+			}
+			0xBF => { // LAX Absolute, Y (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.y);
+				LAX!(ea);
 			}
 			0xC0 => { // CPY Immediate
 				IMM!(ea, self.pc);
