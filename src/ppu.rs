@@ -1,17 +1,19 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 use crate::io::*;
+use std::{thread, time};
 use crate::events::*;
 
 const CLOCKS_PAR_LINE: u32 = 341;
 const DRAWABLE_LINES: u32 = 240;
 const SCAN_LINES: u32 = 262;
 
-const CR1_NAMETABLE_MASK: u8 = 0x02;
-
 /* Control Regster1 &H2000 */
 const FLAG_NMI_ON_VB: u8 = 0x80;
+const CR1_BG_PATTABLE_MASK: u8 = 0x10; // 0: 0x0000, 1:0x1000
+const CR1_SP_PATTABLE_MASK: u8 = 0x08; // 0: 0x0000, 1:0x1000
 const FLAG_ADDR_INC: u8 = 0x04; // 0: +1, 1: +32
+const CR1_NAMETABLE_MASK: u8 = 0x03;
 
 /* Status Register &H2002 */
 const FLAG_VBLANK: u8 = 0x80;
@@ -38,6 +40,26 @@ macro_rules! get_nametable {
 	}
 }
 
+macro_rules! get_bg_pattern_table_addr {
+	($cr1: expr) => {
+		if ($cr1 & CR1_BG_PATTABLE_MASK) == 0 {
+			0x0000
+		} else {
+			0x1000
+		}
+	}
+}
+
+macro_rules! get_sprite_pattern_table_addr {
+	($cr1: expr) => {
+		if ($cr1 & CR1_SP_PATTABLE_MASK) == 0 {
+			0x0000
+		} else {
+			0x1000
+		}
+	}
+}
+
 pub struct PPU {
 	cr1: u8,  // Control Register 1
 	cr2: u8,  // Control Register 1
@@ -53,13 +75,15 @@ pub struct PPU {
 	mem: Vec<u8>,
 	sprite_mem: Vec<u8>,
 
+	pattern_lut: Vec<u8>,
+
 	io: Arc<Mutex<IO>>,
 	event_queue: Arc<Mutex<EventQueue>>
 }
 
 impl PPU {
 	pub fn new(io:Arc<Mutex<IO>>, event_queue: Arc<Mutex<EventQueue>>) -> PPU {
-		PPU {
+		let mut ppu = PPU {
 			cr1: 0,
 			cr2: 0,
 			sr: 0,
@@ -74,10 +98,14 @@ impl PPU {
 			mem: vec![0; 0x4000],
 			sprite_mem: vec![0; 256],
 
+			pattern_lut: vec![0; 256*256*8], // Hi * Lo * x
+
 			io: io,
 			event_queue: event_queue
-		}
+		};
+		ppu.generate_lut();
 
+		return ppu;
 	}
 
 	pub fn reset(&mut self) {	
@@ -167,6 +195,8 @@ impl PPU {
 
 	fn frame_start(&mut self) {
 		println!("PPU: FrameStart");
+		//let sleep_dur = time::Duration::from_millis(3000);
+		//thread::sleep(sleep_dur);
 	}
 
 	fn frame_end(&mut self) {
@@ -196,17 +226,50 @@ impl PPU {
 		let u:u32 = (x/8)%32; // [0 .. 32]
 		let v:u32 = (y/8)%30; // [0 .. 30]
 		let addr:u32 = nametable_base[nametable_id as usize] + v*32 + u;
-		let pat = self.mem[addr as usize];
+		let pat_id:u8 = self.mem[addr as usize]; // pattern id [0..255]
+
+		let pat_base:u16 = get_bg_pattern_table_addr!(self.cr1);
+		let pat_addr:u16 = pat_base + (pat_id as u16)<< 4;
+		let pat_addr_lo:u16 = pat_addr + (y%8) as u16;
+		let pat_addr_hi:u16 = pat_addr_lo + 8;
+		let pat_lo = self.mem[pat_addr_lo as usize];
+		let pat_hi = self.mem[pat_addr_hi as usize];
+		let pat = self.pattern_lut[(((pat_hi as usize)*256 + (pat_lo as usize))*8 + (x as usize)%8) as usize];
 
 		// TODO: draw pttern, color
 		{
 			let mut io = self.io.lock().unwrap();
-			//io.vram[0] = 0;
+			let pat:u8 = pat << 6;
 			io.draw_pixel(x, y, pat, pat, pat);
 		}
 	}
 
 	pub fn get_sprite_mem(&mut self) -> &mut Vec<u8> {
 		&mut self.sprite_mem
+	}
+
+    pub fn set_crom(&mut self, crom: &[u8]) {
+		self.mem[0..0x2000].copy_from_slice(crom);
+	}
+
+	fn generate_lut(&mut self) {
+		for hi in 0..=255 {
+			for lo in 0..=255 {
+				for x in 0..8 {
+					let pat_hi:u8 = (hi >> (7-x)) & 0x01;
+					let pat_lo:u8 = (lo >> (7-x)) & 0x01;
+					let pat:u8 = pat_hi << 1 | pat_lo;
+					//println!("LUT({:08b}, {:08b}, {}) -> {:02b}", hi, lo, x, pat);
+
+					let mut index: usize = hi as usize;
+					index *= 256;
+					index += lo as usize;
+					index *= 8;
+					index += x as usize;
+
+					self.pattern_lut[index] = pat;
+				}
+			}
+		}
 	}
 }

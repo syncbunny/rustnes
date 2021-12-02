@@ -208,6 +208,8 @@ impl MMU {
 
 	pub fn set_CROM(&mut self, crom: &[u8]) {
 		self.crom = crom.to_vec();
+		let mut ppu = self.ppu.borrow_mut();
+		ppu.set_crom(crom);
 		println!("crom.len={}", self.crom.len());
 	}
 
