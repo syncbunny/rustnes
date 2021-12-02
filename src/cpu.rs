@@ -551,7 +551,7 @@ impl CPU {
 				let m:u8 = mmu.read_1byte($ea);
 				let m = m.wrapping_add(1);
 				mmu.write($ea, m);
-				UPDATE_NZ!(m+1, self.p);
+				UPDATE_NZ!(m, self.p);
 			}
 		}
 		macro_rules! DEC {
