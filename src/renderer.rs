@@ -37,6 +37,10 @@ impl Renderer {
 	pub fn new(io:Arc<Mutex<IO>>) -> Renderer {
 		let sdl_context = sdl2::init().unwrap();
 		let video_subsystem = sdl_context.video().unwrap();
+		let controller_subsystem = sdl_context.game_controller().unwrap();
+
+		let nr_controller = controller_subsystem.num_joysticks().unwrap();
+		println!("Number of controllers: {}", nr_controller);
 
 		let gl_attr = video_subsystem.gl_attr();
 		gl_attr.set_context_profile(GLProfile::Core);
@@ -112,7 +116,72 @@ impl Renderer {
 				match event {
 					Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
 						break 'running
-					}, _ => {}
+					},
+
+					Event::KeyDown { keycode: Some(Keycode::X), .. } => {
+						self.io.lock().unwrap().pad.set_a(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::X), .. } => {
+						self.io.lock().unwrap().pad.set_a(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Z), .. } => {
+						self.io.lock().unwrap().pad.set_b(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Z), .. } => {
+						self.io.lock().unwrap().pad.set_b(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Return), .. } => {
+						self.io.lock().unwrap().pad.set_start(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Return), .. } => {
+						self.io.lock().unwrap().pad.set_start(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::RShift), .. } => {
+						self.io.lock().unwrap().pad.set_select(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::RShift), .. } => {
+						self.io.lock().unwrap().pad.set_select(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
+						self.io.lock().unwrap().pad.set_up(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Up), .. } => {
+						self.io.lock().unwrap().pad.set_up(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Up), .. } => {
+						self.io.lock().unwrap().pad.set_up(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Up), .. } => {
+						self.io.lock().unwrap().pad.set_up(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
+						self.io.lock().unwrap().pad.set_down(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Down), .. } => {
+						self.io.lock().unwrap().pad.set_down(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
+						self.io.lock().unwrap().pad.set_left(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Left), .. } => {
+						self.io.lock().unwrap().pad.set_left(0, 0);
+					}
+
+					Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
+						self.io.lock().unwrap().pad.set_right(0, 1);
+					}
+					Event::KeyUp { keycode: Some(Keycode::Right), .. } => {
+						self.io.lock().unwrap().pad.set_right(0, 0);
+					}
+
+					_ => {}
 				}
         		}
 			println!("render_loop:");

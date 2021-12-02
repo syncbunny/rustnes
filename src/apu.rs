@@ -51,6 +51,22 @@ impl APU {
 		// TODO
 	}
 
+	pub fn set_sw_cr1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw_cr2(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw_fq1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw_fq2(&mut self, v: u8) {
+		// TODO
+	}
+
 	pub fn set_dmc1(&mut self, v: u8) {
 		// TODO
 	}

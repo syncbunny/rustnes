@@ -1,11 +1,22 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
+
+use crate::pad::*;
+
 pub struct IO {
-	pub vram: Vec<u8>
+	pub vram: Vec<u8>,
+	pub pad: Pad,
 }
 
 impl IO {
 	pub fn new() -> IO {
+		let pad = Arc::new(Mutex::new(Pad::new()));
+
 		IO {
-			vram: vec![0; 256*240*3]
+			vram: vec![0; 256*240*3],
+			pad: Pad::new()
 		}
 	}
 

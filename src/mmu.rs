@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use crate::ppu::*;
 use crate::apu::*;
 use crate::pad::*;
+use crate::io::*;
 use crate::events::*;
 
 pub struct MMU {
@@ -15,8 +16,7 @@ pub struct MMU {
 	crom: Vec<u8>,
 	ppu: Rc<RefCell<PPU>>,
 	apu: Rc<RefCell<APU>>,
-	pad: Rc<RefCell<Pad>>,
-
+	io: Arc<Mutex<IO>>,
 	event_queue: Arc<Mutex<EventQueue>>
 }
 
@@ -24,7 +24,7 @@ impl MMU {
 	pub fn new(
 		ppu:Rc<RefCell<PPU>>,
 		apu:Rc<RefCell<APU>>,
-		pad:Rc<RefCell<Pad>>,
+		io: Arc<Mutex<IO>>,
 		event_queue: Arc<Mutex<EventQueue>>
 	) -> MMU {
 		MMU {
@@ -34,8 +34,7 @@ impl MMU {
 			crom: Vec::new(),
 			ppu: ppu,
 			apu: apu,
-			pad: pad,
-
+			io: io,
 			event_queue: event_queue
 		}
 	}
@@ -53,10 +52,12 @@ impl MMU {
 				ret = self.ppu.borrow().get_sr();
 			}
 			0x4016 => {
-				ret = self.pad.borrow_mut().in1();
+				let mut io = self.io.lock().unwrap();
+				ret = io.pad.in1();
 			}
 			0x4017 => {
-				ret = self.pad.borrow_mut().in2();
+				let mut io = self.io.lock().unwrap();
+				ret = io.pad.in2();
 			}
 			0x8000 ..= 0xFFFF => {
 				ret = self.prom[(addr - 0x8000) as usize];	
@@ -151,6 +152,18 @@ impl MMU {
 			0x2007 => {
 				self.ppu.borrow_mut().write(n);
 			}
+			0x4000 => {
+				self.apu.borrow_mut().set_sw_cr1(n);
+			}
+			0x4001 => {
+				self.apu.borrow_mut().set_sw_cr2(n);
+			}
+			0x4002 => {
+				self.apu.borrow_mut().set_sw_fq1(n);
+			}
+			0x4003 => {
+				self.apu.borrow_mut().set_sw_fq2(n);
+			}
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);
 			}
@@ -161,7 +174,8 @@ impl MMU {
 				self.apu.borrow_mut().set_ch_ctrl(n);
 			}
 			0x4016 => {
-				self.pad.borrow_mut().out(n);
+				let mut io = self.io.lock().unwrap();
+				io.pad.out(n);
 			}
 			0x4017 => {
 				self.apu.borrow_mut().set_frame_counter(n);
