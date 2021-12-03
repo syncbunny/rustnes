@@ -56,14 +56,14 @@ const CLOCK_TABLE: [u8;256] = [
         /* 50 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
         /* 60 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
         /* 70 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
-        /* 80 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 90 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 3, 1, 0, 0, 3, 0, 0,
+        /* 80 */  2, 2, 2, 6, 2, 2, 2, 3, 1, 2, 1, 0, 3, 3, 3, 4,
+        /* 90 */  2, 2, 0, 0, 2, 2, 2, 4, 1, 3, 1, 0, 0, 3, 0, 0,
         /* a0 */  2, 2, 2, 6, 2, 2, 2, 3, 1, 2, 1, 0, 3, 3, 3, 4,
         /* b0 */  2, 2, 5, 0, 2, 2, 2, 4, 1, 3, 1, 0, 3, 3, 3, 4,
-        /* c0 */  2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* d0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
-        /* e0 */  2, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* f0 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
+        /* c0 */  2, 2, 2, 8, 2, 2, 2, 5, 1, 2, 1, 0, 3, 3, 3, 6,
+        /* d0 */  2, 2, 0, 8, 4, 2, 2, 6, 1, 3, 2, 7, 4, 3, 3, 7,
+        /* e0 */  2, 2, 2, 8, 2, 2, 2, 5, 1, 2, 1, 0, 3, 3, 3, 6,
+        /* f0 */  2, 2, 0, 8, 4, 2, 2, 6, 1, 3, 2, 7, 4, 3, 3, 7,
 ];
 
 pub struct CPU {
@@ -426,6 +426,13 @@ impl CPU {
 				UPDATE_NZ!(self.a, self.p);
 			}
 		}
+		macro_rules! AAX {
+			($ea: expr) => {
+				let m: u8 = self.x & self.a;
+				mmu.write($ea, m);
+				UPDATE_NZ!(m, self.p);
+			}
+		}
 		macro_rules! LSR_A {
 			() => {
 				if self.a & 0x01 == 0 {
@@ -562,6 +569,19 @@ impl CPU {
 				UPDATE_NZ!(m, self.p);
 			}
 		}
+		macro_rules! DCP {
+			($ea: expr) => {
+				let mut m:u8 = mmu.read_1byte($ea);
+				m = m.wrapping_sub(1);
+				if self.a >= m {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				mmu.write($ea, m);
+				UPDATE_NZ!(self.a.wrapping_sub(m), self.p);
+			}
+		}
 		macro_rules! ADC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
@@ -587,6 +607,27 @@ impl CPU {
 		macro_rules! SBC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
+				let c:u8 = if self.p & FLG_C != 0 {1} else {0};
+				if self.a >= m {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let new_a:u8 = self.a.wrapping_sub(m);
+				let new_a:u8 = new_a.wrapping_sub(c);
+				if ((self.a ^ m) & (self.a ^ new_a) & 0x80) == 0x80 {
+					SET_V!(self.p);
+				} else {
+					UNSET_V!(self.p);
+				}
+				self.a = new_a;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! ISC {
+			($ea: expr) => {
+				let m: u8 = mmu.read_1byte($ea);
+				let m: u8 = m.wrapping_add(1);
 				let c:u8 = if self.p & FLG_C != 0 {1} else {0};
 				if self.a >= m {
 					SET_C!(self.p);
@@ -1019,6 +1060,10 @@ impl CPU {
 			0x82 => { // NOP Immediate (undocumented)
 				IMM!(ea, self.pc);
 			}
+			0x83 => { // AAX Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				AAX!(ea);
+			}
 			0x84 => { // STY ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				STY!(ea);
@@ -1030,6 +1075,10 @@ impl CPU {
 			0x86 => { // STX ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				STX!(ea);
+			}
+			0x87 => { // AAX ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				AAX!(ea);
 			}
 			0x88 => { // DEY
 				DEY!();
@@ -1047,6 +1096,10 @@ impl CPU {
 			0x8E => { // STX Absolute
 				ABS!(ea, self.pc);
 				STX!(ea);
+			}
+			0x8F => { // AAX Absolute (undocumented)
+				ABS!(ea, self.pc);
+				AAX!(ea);
 			}
 			0x8D => { // STA Absolute
 				ABS!(ea, self.pc);
@@ -1071,6 +1124,10 @@ impl CPU {
 			0x96 => { // STX ZeroPage, Y
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.y);
 				STX!(ea);
+			}
+			0x97 => { // AAX ZeroPage, Y (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.y);
+				AAX!(ea);
 			}
 			0x98 => { // TYA
 				TYA!();
@@ -1209,6 +1266,10 @@ impl CPU {
 			0xC2 => { // NOP Immediate (undocumented)
 				IMM!(ea, self.pc);
 			}
+			0xC3 => { // DCP Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				DCP!(ea);
+			}
 			0xC4 => { // CPY ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				CPY!(ea);
@@ -1220,6 +1281,10 @@ impl CPU {
 			0xC6 => { // DEC ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				DEC!(ea);
+			}
+			0xC7 => { // DCP ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				DCP!(ea);
 			}
 			0xC8 => { // INY
 				INY!();
@@ -1243,6 +1308,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				DEC!(ea);
 			}
+			0xCF => { // DCP Absolute (undocumented)
+				ABS!(ea, self.pc);
+				DCP!(ea);
+			}
 			0xD0 => { // BNE Relative
 				REL!(ea, self.pc);
 				BNE!(ea);
@@ -1250,6 +1319,10 @@ impl CPU {
 			0xD1 => { // CMP Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				CMP!(ea);
+			}
+			0xD3 => { // DCP Indirect, Y (undocumented)
+				INDIRECT_Y!(ea, self.pc);
+				DCP!(ea);
 			}
 			0xD4 => { // NOP ZeroPage, X (Undocumented)
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -1263,6 +1336,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				DEC!(ea);
 			}
+			0xD7 => { // DCP ZeroPage, X (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				DCP!(ea);
+			}
 			0xD8 => { // CLD
 				CLD!();
 			}
@@ -1271,6 +1348,10 @@ impl CPU {
 				CMP!(ea);
 			}
 			0xDA => { // NOP (undocumented)
+			}
+			0xDB => { // DCP Absolute, Y (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.y);
+				DCP!(ea);
 			}
 			0xDC => { // NOP Absolute, X (undocumented)
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1283,6 +1364,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				DEC!(ea);
 			}
+			0xDF => { // DCP Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+				DCP!(ea);
+			}
 			0xE0 => { // CPX Immediate
 				IMM!(ea, self.pc);
 				CPX!(ea);
@@ -1290,6 +1375,10 @@ impl CPU {
 			0xE1 => { // SBC Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				SBC!(ea);
+			}
+			0xE3 => { // ISC Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				ISC!(ea);
 			}
 			0xE4 => { // CPX ZeroPage
 				ZERO_PAGE!(ea, self.pc);
@@ -1303,6 +1392,10 @@ impl CPU {
 				ZERO_PAGE!(ea, self.pc);
 				INC!(ea);
 			}
+			0xE7 => { // ISC ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				ISC!(ea);
+			}
 			0xE8 => { // INX
 				INX!();
 			}
@@ -1311,6 +1404,10 @@ impl CPU {
 				SBC!(ea);
 			}
 			0xEA => { // NOP
+			}
+			0xEB => { // SBC Immediate (undocumented)
+				IMM!(ea, self.pc);
+				SBC!(ea);
 			}
 			0xEC => { // CPX Absolute
 				ABS!(ea, self.pc);
@@ -1324,6 +1421,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				INC!(ea);
 			}
+			0xEF => { // ISC Absolute (undocumented)
+				ABS!(ea, self.pc);
+				ISC!(ea);
+			}
 			0xF0 => { // BEQ Relative
 				REL!(ea, self.pc);
 				BEQ!(ea);
@@ -1331,6 +1432,10 @@ impl CPU {
 			0xF1 => { // SBC Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				SBC!(ea);
+			}
+			0xF3 => { // ISC Indirect, Y (undocumented)
+				INDIRECT_Y!(ea, self.pc);
+				ISC!(ea);
 			}
 			0xF4 => { // NOP ZeroPage, X (Undocumented)
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -1344,6 +1449,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				INC!(ea);
 			}
+			0xF7 => { // ISC ZeroPage, X (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				ISC!(ea);
+			}
 			0xF8 => { // SED Implied
 				SED!();
 			}
@@ -1352,6 +1461,10 @@ impl CPU {
 				SBC!(ea);
 			}
 			0xFA => { // NOP (undocumented)
+			}
+			0xFB => { // ISC Absolute, Y (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.y);
+				ISC!(ea);
 			}
 			0xFC => { // NOP Absolute, X (undocumented)
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1363,6 +1476,10 @@ impl CPU {
 			0xFE => { // INC Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				INC!(ea);
+			}
+			0xFF => { // ISC Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+				ISC!(ea);
 			}
 			_ => {
 				panic!("unsupported opcode:{:x}", op);
