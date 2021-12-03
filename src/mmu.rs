@@ -153,16 +153,28 @@ impl MMU {
 				self.ppu.borrow_mut().write(n);
 			}
 			0x4000 => {
-				self.apu.borrow_mut().set_sw_cr1(n);
+				self.apu.borrow_mut().set_sw1_cr1(n);
 			}
 			0x4001 => {
-				self.apu.borrow_mut().set_sw_cr2(n);
+				self.apu.borrow_mut().set_sw1_cr2(n);
 			}
 			0x4002 => {
-				self.apu.borrow_mut().set_sw_fq1(n);
+				self.apu.borrow_mut().set_sw1_fq1(n);
 			}
 			0x4003 => {
-				self.apu.borrow_mut().set_sw_fq2(n);
+				self.apu.borrow_mut().set_sw1_fq2(n);
+			}
+			0x4004 => {
+				self.apu.borrow_mut().set_sw2_cr1(n);
+			}
+			0x4005 => {
+				self.apu.borrow_mut().set_sw2_cr2(n);
+			}
+			0x4006 => {
+				self.apu.borrow_mut().set_sw2_fq1(n);
+			}
+			0x4007 => {
+				self.apu.borrow_mut().set_sw2_fq2(n);
 			}
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);

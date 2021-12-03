@@ -51,19 +51,35 @@ impl APU {
 		// TODO
 	}
 
-	pub fn set_sw_cr1(&mut self, v: u8) {
+	pub fn set_sw1_cr1(&mut self, v: u8) {
 		// TODO
 	}
 
-	pub fn set_sw_cr2(&mut self, v: u8) {
+	pub fn set_sw1_cr2(&mut self, v: u8) {
 		// TODO
 	}
 
-	pub fn set_sw_fq1(&mut self, v: u8) {
+	pub fn set_sw1_fq1(&mut self, v: u8) {
 		// TODO
 	}
 
-	pub fn set_sw_fq2(&mut self, v: u8) {
+	pub fn set_sw1_fq2(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw2_cr1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw2_cr2(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw2_fq1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_sw2_fq2(&mut self, v: u8) {
 		// TODO
 	}
 
