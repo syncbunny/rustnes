@@ -48,14 +48,14 @@ macro_rules! UPDATE_NZ { ($x: expr, $p: expr) => { UPDATE_N!($x, $p); UPDATE_Z!(
 
 const CLOCK_TABLE: [u8;256] = [
         /* xx    00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F */
-        /*  0 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 4, 3, 3, 0,
-        /* 10 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
-        /* 20 */  3, 2, 0, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 30 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
-        /* 40 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 50 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
-        /* 60 */  1, 2, 0, 0, 3, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0,
-        /* 70 */  2, 2, 0, 0, 4, 2, 2, 0, 1, 3, 2, 0, 4, 3, 3, 0,
+        /*  0 */  1, 2, 0, 8, 3, 2, 2, 5, 1, 2, 1, 0, 4, 3, 3, 6,
+        /* 10 */  2, 2, 0, 8, 4, 2, 2, 6, 1, 3, 2, 7, 4, 3, 3, 7,
+        /* 20 */  3, 2, 0, 8, 2, 2, 2, 5, 1, 2, 1, 0, 3, 3, 3, 6,
+        /* 30 */  2, 2, 0, 8, 4, 2, 2, 6, 1, 3, 2, 7, 4, 3, 3, 7,
+        /* 40 */  1, 2, 0, 8, 3, 2, 2, 5, 1, 2, 1, 0, 3, 3, 3, 6,
+        /* 50 */  2, 2, 0, 8, 4, 2, 2, 6, 1, 3, 2, 7, 4, 3, 3, 7,
+        /* 60 */  1, 2, 0, 8, 3, 2, 2, 5, 1, 2, 1, 0, 3, 3, 3, 6,
+        /* 70 */  2, 2, 0, 8, 4, 2, 2, 6, 1, 3, 2, 7, 4, 3, 3, 7,
         /* 80 */  2, 2, 2, 6, 2, 2, 2, 3, 1, 2, 1, 0, 3, 3, 3, 4,
         /* 90 */  2, 2, 0, 0, 2, 2, 2, 4, 1, 3, 1, 0, 0, 3, 0, 0,
         /* a0 */  2, 2, 2, 6, 2, 2, 2, 3, 1, 2, 1, 0, 3, 3, 3, 4,
@@ -594,7 +594,7 @@ impl CPU {
 					UNSET_C!(self.p);
 				}
 				let new_a:u8 = (t & 0x00FFu16) as u8;
-                		if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
+                if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
 					SET_V!(self.p);
 				} else {
 					UNSET_V!(self.p);
@@ -707,6 +707,79 @@ impl CPU {
 				self.p = POP!();
 			}
 		}
+		macro_rules! SLO {
+			($ea: expr) => {
+				let m: u8 = mmu.read_1byte($ea);
+				if m & 0x80 != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let m: u8 = m << 1;
+				self.a |= m;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! SRE {
+			($ea: expr) => {
+				let m: u8 = mmu.read_1byte($ea);
+				let c = if self.p & FLG_C == 0 {0x09} else {0x80};
+				if m & 0x01 != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let m: u8 = m >> 1;
+				let m: u8 = m | c;
+				self.a ^= m;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! RLA {
+			($ea: expr) => {
+				let m: u8 = mmu.read_1byte($ea);
+				let c = if self.p & FLG_C == 0 {0x0} else {0x1};
+				if m & 0x80 != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let m:u8 = m << 1;
+				let m:u8 = m|c;
+				self.a &= m;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
+		macro_rules! RRA {
+			($ea: expr) => {
+				let m: u8 = mmu.read_1byte($ea);
+				let c = if self.p & FLG_C == 0 {0x00} else {0x80};
+				if m & 0x01 != 0 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let m:u8 = m >> 1;
+				let m:u8 = m|c;
+				mmu.write($ea, m);
+
+				let c = if self.p & FLG_C == 0 {0} else {1};
+				let t:u16 = self.a as u16 + m as u16 + c as u16;
+				if t > 0x00FFu16 {
+					SET_C!(self.p);
+				} else {
+					UNSET_C!(self.p);
+				}
+				let new_a:u8 = (t & 0x00FFu16) as u8;
+           		if ((self.a ^ new_a) & (m ^ new_a) & 0x80) == 0x80 {
+					SET_V!(self.p);
+				} else {
+					UNSET_V!(self.p);
+				}
+				self.a = new_a;
+				UPDATE_NZ!(self.a, self.p);
+			}
+		}
 		macro_rules! BRK {
 			() => {
 				if (self.p & FLG_I) == 0 {
@@ -732,6 +805,10 @@ impl CPU {
 				INDIRECT_X!(ea, self.pc);
 				ORA!(ea);
 			}
+			0x03 => { // SLO Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				SLO!(ea);
+			}
 			0x04 => { // NOP ZeroPage (Undocumented)
 				ZERO_PAGE!(ea, self.pc);
 				// NOP
@@ -743,6 +820,10 @@ impl CPU {
 			0x06 => { // ASL ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				ASL!(ea);
+			}
+			0x07 => { // SLO ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				SLO!(ea);
 			}
 			0x08 => { // PHP
 				PHP!();
@@ -766,6 +847,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				ASL!(ea);
 			}
+			0x0F => { // SLO Absolute (undocumented)
+				ABS!(ea, self.pc);
+				SLO!(ea);
+			}
 			0x10 => { // BPL Relative
 				REL!(ea, self.pc);
 				BPL!(ea);
@@ -773,6 +858,10 @@ impl CPU {
 			0x11 => { // ORA Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				ORA!(ea);
+			}
+			0x13 => { // SLO Indirect, Y (undocumented)
+				INDIRECT_Y!(ea, self.pc);
+				SLO!(ea);
 			}
 			0x14 => { // NOP ZeroPage, X (Undocumented)
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -786,6 +875,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				ASL!(ea);
 			}
+			0x17 => { // SLO ZeroPage, X (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				SLO!(ea);
+			}
 			0x18 => { // CLC
 				CLC!();
 			}
@@ -794,6 +887,10 @@ impl CPU {
 				ORA!(ea);
 			}
 			0x1A => { // NOP (undocumented)
+			}
+			0x1B => { // SLO Absolute, Y (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.y);
+				SLO!(ea);
 			}
 			0x1C => { // NOP Absolute, X (undocumented)
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -806,6 +903,10 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ASL!(ea);
 			}
+			0x1F => { // SLO Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+				SLO!(ea);
+			}
 			0x20 => { // JSR Absolute
 				ABS!(ea, self.pc);
 				JSR!(ea);
@@ -813,6 +914,10 @@ impl CPU {
 			0x21 => { // AND Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				AND!(ea);
+			}
+			0x23 => { // RLA Indirect, X
+				INDIRECT_X!(ea, self.pc);
+				RLA!(ea);
 			}
 			0x24 => { // BIT Zeropage
 				ZERO_PAGE!(ea, self.pc);
@@ -825,6 +930,10 @@ impl CPU {
 			0x26 => { // ROL ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				ROL!(ea);
+			}
+			0x27 => { // RLA ZeroPage
+				ZERO_PAGE!(ea, self.pc);
+				RLA!(ea);
 			}
 			0x28 => { // PLP
 				PLP!();
@@ -848,6 +957,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				ROL!(ea);
 			}
+			0x2F => { // RLA Absolute
+				ABS!(ea, self.pc);
+				RLA!(ea);
+			}
 			0x30 => { // BMI Relative
 				REL!(ea, self.pc);
 				BMI!(ea);
@@ -855,6 +968,10 @@ impl CPU {
 			0x31 => { // AND Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				AND!(ea);
+			}
+			0x33 => { // RLA Indirect, Y
+				INDIRECT_Y!(ea, self.pc);
+				RLA!(ea);
 			}
 			0x34 => { // NOP ZeroPage, X (Undocumented)
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -868,6 +985,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				ROL!(ea);
 			}
+			0x37 => { // RLA ZeroPage, X
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				RLA!(ea);
+			}
 			0x38 => { // SEC
 				SEC!();
 			}
@@ -876,6 +997,10 @@ impl CPU {
 				AND!(ea);
 			}
 			0x3A => { // NOP (undocumented)
+			}
+			0x3B => { // RLA Absolute, Y
+				ABS_INDEXED!(ea, self.pc, self.y);
+				RLA!(ea);
 			}
 			0x3C => { // NOP Absolute, X (undocumented)
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -888,12 +1013,20 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ROL!(ea);
 			}
+			0x3F => { // RLA Absolute, X
+				ABS_INDEXED!(ea, self.pc, self.x);
+				RLA!(ea);
+			}
 			0x40 => { // RTI
 				RTI!();
 			}
 			0x41 => { // EOR Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				EOR!(ea);
+			}
+			0x43 => { // SRE Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				SRE!(ea);
 			}
 			0x44 => { // NOP ZeroPage (Undocumented)
 				ZERO_PAGE!(ea, self.pc);
@@ -906,6 +1039,10 @@ impl CPU {
 			0x46 => { // LSR ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				LSR!(ea);
+			}
+			0x47 => { // SRE ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				SRE!(ea);
 			}
 			0x48 => { // PHA
 				PHA!();
@@ -929,6 +1066,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				LSR!(ea);
 			}
+			0x4F => { // SRE Absolute (undocumented)
+				ABS!(ea, self.pc);
+				SRE!(ea);
+			}
 			0x50 => { // BVC Relative
 				REL!(ea, self.pc);
 				BVC!(ea);
@@ -936,6 +1077,10 @@ impl CPU {
 			0x51 => { // EOR Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				EOR!(ea);
+			}
+			0x53 => { // SRE Indirect, Y (undocumented)
+				INDIRECT_Y!(ea, self.pc);
+				SRE!(ea);
 			}
 			0x54 => { // NOP ZeroPage, X (Undocumented)
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -949,6 +1094,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				LSR!(ea);
 			}
+			0x57 => { // SRE ZeroPage, X (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				SRE!(ea);
+			}
 			0x58 => { // CLI
 				CLI!();
 			}
@@ -957,6 +1106,10 @@ impl CPU {
 				EOR!(ea);
 			}
 			0x5A => { // NOP (undocumented)
+			}
+			0x5B => { // SRE Absolute, Y (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.y);
+				SRE!(ea);
 			}
 			0x5C => { // NOP Absolute, X (undocumented)
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -969,12 +1122,20 @@ impl CPU {
 				ABS_INDEXED!(ea, self.pc, self.x);
 				LSR!(ea);
 			}
+			0x5F => { // SRE Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+				SRE!(ea);
+			}
 			0x60 => { // RTS
 				RTS!();
 			}
 			0x61 => { // ADC Indirect, X
 				INDIRECT_X!(ea, self.pc);
 				ADC!(ea);
+			}
+			0x63 => { // RRA Indirect, X (undocumented)
+				INDIRECT_X!(ea, self.pc);
+				RRA!(ea);
 			}
 			0x64 => { // NOP ZeroPage (Undocumented)
 				ZERO_PAGE!(ea, self.pc);
@@ -987,6 +1148,10 @@ impl CPU {
 			0x66 => { // ROR ZeroPage
 				ZERO_PAGE!(ea, self.pc);
 				ROR!(ea);
+			}
+			0x67 => { // RRA ZeroPage (undocumented)
+				ZERO_PAGE!(ea, self.pc);
+				RRA!(ea);
 			}
 			0x68 => { // PLA
 				PLA!();
@@ -1010,6 +1175,10 @@ impl CPU {
 				ABS!(ea, self.pc);
 				ROR!(ea);
 			}
+			0x6F => { // RRA Absolute (undocumented)
+				ABS!(ea, self.pc);
+				RRA!(ea);
+			}
 			0x70 => { // BVS Relative
 				REL!(ea, self.pc);
 				BVS!(ea);
@@ -1017,6 +1186,10 @@ impl CPU {
 			0x71 => { // ADC Indirect, Y
 				INDIRECT_Y!(ea, self.pc);
 				ADC!(ea);
+			}
+			0x73 => { // RRA Indirect, Y (undocumented)
+				INDIRECT_Y!(ea, self.pc);
+				RRA!(ea);
 			}
 			0x74 => { // NOP ZeroPage, X (Undocumented)
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
@@ -1030,6 +1203,10 @@ impl CPU {
 				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
 				ROR!(ea);
 			}
+			0x77 => { // RRA ZeroPage, X (undocumented)
+				ZERO_PAGE_INDEXED!(ea, self.pc, self.x);
+				RRA!(ea);
+			}
 			0x78 => { // SEI
 				SEI!();
 			}
@@ -1038,6 +1215,10 @@ impl CPU {
 				ADC!(ea);
 			}
 			0x7A => { // NOP (undocumented)
+			}
+			0x7B => { // RRA Absolute, Y (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.y);
+				RRA!(ea);
 			}
 			0x7C => { // NOP Absolute, X (undocumented)
 				ABS_INDEXED!(ea, self.pc, self.x);
@@ -1049,6 +1230,10 @@ impl CPU {
 			0x7E => { // ROR Absolute, X
 				ABS_INDEXED!(ea, self.pc, self.x);
 				ROR!(ea);
+			}
+			0x7F => { // RRA Absolute, X (undocumented)
+				ABS_INDEXED!(ea, self.pc, self.x);
+				RRA!(ea);
 			}
 			0x80 => { // NOP Immediate (undocumented)
 				IMM!(ea, self.pc);
