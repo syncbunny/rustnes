@@ -72,6 +72,8 @@ pub struct PPU {
 
 	write_mode: u8, // 0 or 1
 	write_addr: u16,
+	sprite_write_addr: usize,
+	read_buffer: u8,
 	mem: Vec<u8>,
 	sprite_mem: Vec<u8>,
 
@@ -95,6 +97,8 @@ impl PPU {
 
 			write_mode: 0,
 			write_addr: 0,
+			sprite_write_addr: 0,
+			read_buffer: 0,
 			mem: vec![0; 0x4000],
 			sprite_mem: vec![0; 256],
 
@@ -122,7 +126,7 @@ impl PPU {
 
 		self.line_clock += 1;
 		if self.line_clock >= CLOCKS_PAR_LINE {
-			println!("PPU: line {}", self.line);
+			//println!("PPU: line {}", self.line);
 			self.line_clock = 0;
 			self.line += 1;
 			if self.line == DRAWABLE_LINES {
@@ -136,12 +140,19 @@ impl PPU {
 		}
 	}
 
+	// Mapping to 0x2000
 	pub fn set_cr1(&mut self, n:u8) {
 		self.cr1 = n;
 	}
 
+	// Mapping to 0x2001
 	pub fn set_cr2(&mut self, n:u8) {
 		self.cr2 = n;
+	}
+
+	// Mapping to 0x2003
+	pub fn set_sprite_write_addr(&mut self, n: u8) {
+		self.sprite_write_addr = n as usize;
 	}
 
 	pub fn get_sr(&self) -> u8 {
@@ -166,6 +177,7 @@ impl PPU {
 		}
 	}
 
+	// Mapping to 0x2007
 	pub fn write(&mut self, v:u8) {
 		let addr = self.write_addr & 0x3FFF;
 		let mut v = v;
@@ -185,6 +197,32 @@ impl PPU {
 		}
 	}
 
+	// Mapping to 0x2007
+	pub fn read(&mut self) -> u8 {
+		let ret:u8;
+		match self.write_addr {
+			0..=0x3EFF => {
+				ret = self.read_buffer;
+				self.read_buffer = self.mem[self.write_addr as usize];
+			}
+			0x3F00..=0x3FFF => {
+				ret = self.mem[self.write_addr as usize];
+			}
+			_ => {
+				panic!("ppu.read: unmapped address: {:x}", self.write_addr);
+			}
+		}
+
+		// Increment write address
+		if self.cr1 & FLAG_ADDR_INC == 0 {
+			self.write_addr += 1;
+		} else {
+			self.write_addr += 32;
+		}
+
+		return ret;
+	}
+
 	fn start_VR(&mut self) {
 		SET_VBLANK!(self.sr);
 		if (self.cr1 & FLAG_NMI_ON_VB) != 0 {
@@ -194,7 +232,7 @@ impl PPU {
 	}
 
 	fn frame_start(&mut self) {
-		println!("PPU: FrameStart");
+		//println!("PPU: FrameStart");
 		//let sleep_dur = time::Duration::from_millis(3000);
 		//thread::sleep(sleep_dur);
 	}
@@ -229,7 +267,7 @@ impl PPU {
 		let pat_id:u8 = self.mem[addr as usize]; // pattern id [0..255]
 
 		let pat_base:u16 = get_bg_pattern_table_addr!(self.cr1);
-		let pat_addr:u16 = pat_base + (pat_id as u16)<< 4;
+		let pat_addr:u16 = pat_base + ((pat_id as u16)<< 4);
 		let pat_addr_lo:u16 = pat_addr + (y%8) as u16;
 		let pat_addr_hi:u16 = pat_addr_lo + 8;
 		let pat_lo = self.mem[pat_addr_lo as usize];
@@ -239,8 +277,8 @@ impl PPU {
 		// TODO: draw pttern, color
 		{
 			let mut io = self.io.lock().unwrap();
-			//let pat:u8 = pat << 6;
-			//io.draw_pixel(x, y, pat, pat, pat);
+			let pat:u8 = pat << 6;
+			io.draw_pixel(x, y, pat, pat, pat);
 		}
 	}
 

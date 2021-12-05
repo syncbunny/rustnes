@@ -1676,7 +1676,7 @@ impl CPU {
 		self.clock_remain = CLOCK_TABLE[op as usize].into();
 		SET_5!(self.p); // bit 5 is always 1
 
-		self.dump();
+		//self.dump();
 	}
 	
 	pub fn reset(&mut self) {
@@ -1695,7 +1695,7 @@ impl CPU {
 	
 	fn do_reset(&mut self) {
 		println!("cpu:reset");
-		let mmu = self.mmu.borrow();
+		let mut mmu = self.mmu.borrow_mut();
 		self.pc = mmu.read_2bytes(RESET_VECTOR);
 		SET_I!(self.p);
 		self.reset_flag = false;
@@ -1703,7 +1703,7 @@ impl CPU {
 	}
 
 	fn do_nmi(&mut self) {
-		println!("do_nmi");
+		//println!("do_nmi");
 		UNSET_B!(self.p);
 		SET_I!(self.p);
 

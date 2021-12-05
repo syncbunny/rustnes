@@ -105,15 +105,15 @@ impl NES {
 					let evt = evt_w.unwrap();
 					match (evt.event_type) {
 						EventType::NMI => {
-							println!("NMI!");
+							//println!("NMI!");
 							let mut cpu = self.cpu.borrow_mut();
 							cpu.nmi();
 						}
 						EventType::DMA => {
-							println!("DMA!");
+							//println!("DMA!");
 							// Stop CPU 514 cpu-clock
 							self.clock_cpu = 514*CLOCK_DIV_CPU;
-							println!("clock_cpu={}", self.clock_cpu);
+							//println!("clock_cpu={}", self.clock_cpu);
 						}
 					}
 				}

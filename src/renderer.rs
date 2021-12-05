@@ -40,7 +40,7 @@ impl Renderer {
 		let controller_subsystem = sdl_context.game_controller().unwrap();
 
 		let nr_controller = controller_subsystem.num_joysticks().unwrap();
-		println!("Number of controllers: {}", nr_controller);
+		//println!("Number of controllers: {}", nr_controller);
 
 		let gl_attr = video_subsystem.gl_attr();
 		gl_attr.set_context_profile(GLProfile::Core);
@@ -184,7 +184,7 @@ impl Renderer {
 					_ => {}
 				}
         		}
-			println!("render_loop:");
+			//println!("render_loop:");
         		::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
     		}
 	}

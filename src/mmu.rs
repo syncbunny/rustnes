@@ -39,7 +39,7 @@ impl MMU {
 		}
 	}
 
-	pub fn read_1byte(&self, addr:u16) -> u8 {
+	pub fn read_1byte(&mut self, addr:u16) -> u8 {
 		// TODO: address mapping
 
 		let ret:u8;
@@ -50,6 +50,9 @@ impl MMU {
 			}
 			0x2002 => {
 				ret = self.ppu.borrow().get_sr();
+			}
+			0x2007 => {
+				ret = self.ppu.borrow_mut().read();
 			}
 			0x4016 => {
 				let mut io = self.io.lock().unwrap();
@@ -67,11 +70,11 @@ impl MMU {
 			}
 		}
 
-		println!("read_1byte({:x}) -> {:x}", addr, ret);
+		//println!("read_1byte({:x}) -> {:x}", addr, ret);
 		return ret;
 	}
 
-	pub fn read_2bytes(&self, addr:u16) -> u16{
+	pub fn read_2bytes(&mut self, addr:u16) -> u16{
 		// TODO: address mapping
 
 		let mut ret:u16;
@@ -91,11 +94,11 @@ impl MMU {
 			}
 		}
 
-		println!("read_2bytes({:x}) -> {:x}", addr, ret);
+		//println!("read_2bytes({:x}) -> {:x}", addr, ret);
 		return ret;
 	}
 
-	pub fn indirect(&self, addr: u16) -> u16 {
+	pub fn indirect(&mut self, addr: u16) -> u16 {
 		let addr = self.read_2bytes(addr);
 
 		let mut ret:u16;
@@ -110,7 +113,7 @@ impl MMU {
 		return ret;
 	}
 
-	pub fn indirect_x(&self, addr: u16, x: u8) -> u16 {
+	pub fn indirect_x(&mut self, addr: u16, x: u8) -> u16 {
         let z:u8 = self.read_1byte(addr).wrapping_add(x);
 		let mut p:u16 = self.read_1byte(z as u16) as u16;
 		let z = z.wrapping_add(1);
@@ -119,7 +122,7 @@ impl MMU {
         	return p;
 	}
 
-	pub fn indirect_y(&self, addr: u16, y: u8) -> u16 {
+	pub fn indirect_y(&mut self, addr: u16, y: u8) -> u16 {
 		let z = self.read_1byte(addr);
 
 		let mut p:u16 = self.read_1byte(z as u16) as u16;
@@ -142,6 +145,9 @@ impl MMU {
 			}
 			0x2001 => {
 				self.ppu.borrow_mut().set_cr2(n);
+			}
+			0x2003 => {
+				self.ppu.borrow_mut().set_sprite_write_addr(n);
 			}
 			0x2005 => {
 				self.ppu.borrow_mut().set_scroll(n);
@@ -205,7 +211,7 @@ impl MMU {
 				panic!("mmi.write: unmapped address: {:x}", addr);
 			}
 		}
-		println!("write({:x}, {:x})", addr, n);
+		//println!("write({:x}, {:x})", addr, n);
 	}
 
 	pub fn push_2bytes(&mut self, addr:u16, n:u16) {
@@ -213,7 +219,7 @@ impl MMU {
 		self.write(addr -1, (n & 0x00FF) as u8);
 	}
 
-	pub fn pop_2bytes(&self, addr: u16) -> u16 {
+	pub fn pop_2bytes(&mut self, addr: u16) -> u16 {
 		let mut ret: u16;
 		ret = self.read_1byte(addr+1) as u16;
 		ret |= (self.read_1byte(addr+2) as u16) << 8;
@@ -222,7 +228,7 @@ impl MMU {
 
 	pub fn set_mapper(&mut self, m: u8) {
 		self.mapper = m;
-		println!("prom.mapper={}", self.mapper);
+		//println!("prom.mapper={}", self.mapper);
 	}
 
 	pub fn set_PROM(&mut self, prom: &[u8]) {
@@ -266,5 +272,4 @@ impl MMU {
 	pub fn peek_03(&self) -> u8 {
 		return self.wram[0x03];
 	}
-
 }
