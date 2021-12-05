@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::sync::Mutex;
-use crate::io::*;
 use std::{thread, time};
+use crate::io::*;
 use crate::events::*;
 
 const CLOCKS_PAR_LINE: u32 = 341;
@@ -60,6 +60,10 @@ macro_rules! get_sprite_pattern_table_addr {
 	}
 }
 
+pub enum Mirror {
+	HORIZONTAL, VARTICAL
+}
+
 pub struct PPU {
 	cr1: u8,  // Control Register 1
 	cr2: u8,  // Control Register 1
@@ -76,6 +80,7 @@ pub struct PPU {
 	read_buffer: u8,
 	mem: Vec<u8>,
 	sprite_mem: Vec<u8>,
+	mirror: Mirror,
 
 	pattern_lut: Vec<u8>,
 
@@ -101,6 +106,7 @@ impl PPU {
 			read_buffer: 0,
 			mem: vec![0; 0x4000],
 			sprite_mem: vec![0; 256],
+			mirror: Mirror::VARTICAL,
 
 			pattern_lut: vec![0; 256*256*8], // Hi * Lo * x
 
@@ -138,6 +144,10 @@ impl PPU {
 				self.frame_end();
 			}
 		}
+	}
+
+	pub fn set_mirror(&mut self, m:Mirror) {
+		self.mirror = m;
 	}
 
 	// Mapping to 0x2000
@@ -277,11 +287,15 @@ impl PPU {
 
 		let mirror_h_nt_id:[u8; 4] = [ 0, 0, 2, 2 ];
     	let mirror_v_nt_id:[u8; 4] = [ 0, 1, 0, 1 ];
-    	//if (mMirror == MIRROR_V) {
-       		nametable_id = mirror_v_nt_id[nametable_id as usize];
-    	//} else {
-        //	nameTableId = mirrorHNTId[nameTableId];
-    	//}
+		match self.mirror {
+			Mirror::VARTICAL => {
+				nametable_id = mirror_v_nt_id[nametable_id as usize];
+			},
+			Mirror::HORIZONTAL => {
+				nametable_id = mirror_h_nt_id[nametable_id as usize];
+			},
+			_ => {}
+		}
 
 		// calc nametable address
 		//  +-----------+-----------+

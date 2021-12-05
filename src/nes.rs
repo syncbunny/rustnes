@@ -14,7 +14,7 @@ use crate::apu::*;
 use crate::events::*;
 
 // NES Const
-const FLAG6_V_MIRROR: u8           = 0x01;
+const FLAG6_MIRROR: u8             = 0x01;
 const FLAG6_HAS_BATTARY_BACKUP: u8 = 0x02;
 const FLAG6_HAS_TRAINER: u8        = 0x04;
 const FLAG6_HAS_OWN_MIRROR: u8     = 0x80;
@@ -85,6 +85,14 @@ impl NES {
 		start = end;
 		end = start + crom_size *  8 * 1024;
 		self.mmu.borrow_mut().set_CROM(&cartridge[start .. end]);
+
+		// Mirror
+		let flag6: u8 = cartridge[6];
+		if flag6 & FLAG6_MIRROR == 0 {
+			self.ppu.borrow_mut().set_mirror(Mirror::HORIZONTAL);
+		} else {
+			self.ppu.borrow_mut().set_mirror(Mirror::VARTICAL);
+		}
 
 		// Mapper
 		let mapper: u8;
