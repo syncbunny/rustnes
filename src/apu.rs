@@ -99,6 +99,14 @@ impl APU {
 		// TODO
 	}
 
+	pub fn set_tw_fq1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_tw_fq2(&mut self, v: u8) {
+		// TODO
+	}
+
 	pub fn set_noise_cr1(&mut self, v: u8) {
 		// TODO
 	}
