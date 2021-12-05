@@ -185,6 +185,9 @@ impl MMU {
 			0x4008 => {
 				self.apu.borrow_mut().set_tw_cr1(n);
 			}
+			0x4009 => {
+				self.apu.borrow_mut().set_tw_cr2(n);
+			}
 			0x400A => {
 				self.apu.borrow_mut().set_tw_fq1(n);
 			}

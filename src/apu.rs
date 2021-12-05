@@ -99,6 +99,10 @@ impl APU {
 		// TODO
 	}
 
+	pub fn set_tw_cr2(&mut self, v: u8) {
+		// unused io
+	}
+
 	pub fn set_tw_fq1(&mut self, v: u8) {
 		// TODO
 	}
