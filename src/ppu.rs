@@ -239,8 +239,8 @@ impl PPU {
 		// TODO: draw pttern, color
 		{
 			let mut io = self.io.lock().unwrap();
-			let pat:u8 = pat << 6;
-			io.draw_pixel(x, y, pat, pat, pat);
+			//let pat:u8 = pat << 6;
+			//io.draw_pixel(x, y, pat, pat, pat);
 		}
 	}
 

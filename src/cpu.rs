@@ -608,18 +608,20 @@ impl CPU {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
 				let c:u8 = if self.p & FLG_C != 0 {0} else {1};
-				if self.a as u16 >= (m as u16 + c as u16){
+
+				let t:u16 = 0x100u16 + self.a as u16 - m as u16 - c as u16;
+				if t >= 0x100 {
 					SET_C!(self.p);
 				} else {
 					UNSET_C!(self.p);
 				}
-				let new_a:u8 = self.a.wrapping_sub(m);
-				let new_a:u8 = new_a.wrapping_sub(c);
+				let new_a:u8 = (t&0x00FFu16) as u8;
 				if ((self.a ^ m) & (self.a ^ new_a) & 0x80) == 0x80 {
 					SET_V!(self.p);
 				} else {
 					UNSET_V!(self.p);
 				}
+
 				self.a = new_a;
 				UPDATE_NZ!(self.a, self.p);
 			}

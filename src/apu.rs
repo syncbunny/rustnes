@@ -87,7 +87,19 @@ impl APU {
 		// TODO
 	}
 
+	pub fn set_dmc2(&mut self, v: u8) {
+		// TODO
+	}
+
 	pub fn set_ch_ctrl(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_tw_cr1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_noise_cr1(&mut self, v: u8) {
 		// TODO
 	}
 

@@ -176,8 +176,17 @@ impl MMU {
 			0x4007 => {
 				self.apu.borrow_mut().set_sw2_fq2(n);
 			}
+			0x4008 => {
+				self.apu.borrow_mut().set_tw_cr1(n);
+			}
+			0x400C => {
+				self.apu.borrow_mut().set_noise_cr1(n);
+			}
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);
+			}
+			0x4011 => {
+				self.apu.borrow_mut().set_dmc2(n);
 			}
 			0x4014 => {
 				self.start_dma(n);
