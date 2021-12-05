@@ -607,8 +607,8 @@ impl CPU {
 		macro_rules! SBC {
 			($ea: expr) => {
 				let m:u8 = mmu.read_1byte($ea);
-				let c:u8 = if self.p & FLG_C != 0 {1} else {0};
-				if self.a >= m {
+				let c:u8 = if self.p & FLG_C != 0 {0} else {1};
+				if self.a as u16 >= (m as u16 + c as u16){
 					SET_C!(self.p);
 				} else {
 					UNSET_C!(self.p);
