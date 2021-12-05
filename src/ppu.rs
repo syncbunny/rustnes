@@ -64,8 +64,8 @@ pub struct PPU {
 	cr1: u8,  // Control Register 1
 	cr2: u8,  // Control Register 1
 	sr: u8,	  // Status Register
-	scroll_y: i32,
-	scroll_x: i32,
+	scroll_y: u8,
+	scroll_x: u8,
 
 	line: u32,
 	line_clock: u32,
@@ -155,12 +155,23 @@ impl PPU {
 		self.sprite_write_addr = n as usize;
 	}
 
-	pub fn get_sr(&self) -> u8 {
-		return self.sr;
+	pub fn get_sr(&mut self) -> u8 {
+		let sr:u8 = self.sr;
+
+		self.write_mode = 0;
+		CLEAR_VBLANK!(self.sr);
+
+		return sr;
 	}
 
 	pub fn set_scroll(&mut self, v:u8) {
-		// TODO
+		if self.write_mode == 0 {
+			self.scroll_x = v;
+			self.write_mode = 1;
+		} else {
+			self.scroll_y = v;
+			self.write_mode = 0;
+		}
 	}
 
 	pub fn set_write_addr(&mut self, v:u8) {
@@ -246,11 +257,31 @@ impl PPU {
 		}
 
 		// calc nametable id
-		let mut scrollX: i32;
-		let mut scrollY: i32;
 		let nametable_id = get_nametable!(self.cr1);
+		let mut scroll_x: u16 = self.scroll_x as u16;
+		let mut scroll_y: u16 = self.scroll_y as u16;
+		if nametable_id == 1 || nametable_id == 3 {
+			scroll_x += 256;
+		}
+		if nametable_id == 2 || nametable_id == 3 {
+			scroll_y += 240;
+		}
 
-		// TODO: add scroll offset
+		let xx:u32 = x as u32 + scroll_x as u32;
+		let yy:u32 = y as u32 + scroll_y as u32;
+		let xx = xx % 512;	
+		let yy = yy % 480;	
+
+		let mut nametable_id = if xx >= 256 {1} else {0};
+		nametable_id = nametable_id | (if yy >= 240 {2} else {0});
+
+		let mirror_h_nt_id:[u8; 4] = [ 0, 0, 2, 2 ];
+    	let mirror_v_nt_id:[u8; 4] = [ 0, 1, 0, 1 ];
+    	//if (mMirror == MIRROR_V) {
+       		nametable_id = mirror_v_nt_id[nametable_id as usize];
+    	//} else {
+        //	nameTableId = mirrorHNTId[nameTableId];
+    	//}
 
 		// calc nametable address
 		//  +-----------+-----------+
@@ -261,18 +292,18 @@ impl PPU {
 		let nametable_base:[u32;4] = [
 			0x2000, 0x2400, 0x2800, 0x2C00
 		];
-		let u:u32 = (x/8)%32; // [0 .. 32]
-		let v:u32 = (y/8)%30; // [0 .. 30]
+		let u:u32 = (xx/8)%32; // [0 .. 32]
+		let v:u32 = (yy/8)%30; // [0 .. 30]
 		let addr:u32 = nametable_base[nametable_id as usize] + v*32 + u;
 		let pat_id:u8 = self.mem[addr as usize]; // pattern id [0..255]
 
 		let pat_base:u16 = get_bg_pattern_table_addr!(self.cr1);
 		let pat_addr:u16 = pat_base + ((pat_id as u16)<< 4);
-		let pat_addr_lo:u16 = pat_addr + (y%8) as u16;
+		let pat_addr_lo:u16 = pat_addr + (yy%8) as u16;
 		let pat_addr_hi:u16 = pat_addr_lo + 8;
 		let pat_lo = self.mem[pat_addr_lo as usize];
 		let pat_hi = self.mem[pat_addr_hi as usize];
-		let pat = self.pattern_lut[(((pat_hi as usize)*256 + (pat_lo as usize))*8 + (x as usize)%8) as usize];
+		let pat = self.pattern_lut[(((pat_hi as usize)*256 + (pat_lo as usize))*8 + (xx as usize)%8) as usize];
 
 		// TODO: draw pttern, color
 		{

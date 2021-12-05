@@ -49,7 +49,7 @@ impl MMU {
 				ret = self.wram[addr as usize];
 			}
 			0x2002 => {
-				ret = self.ppu.borrow().get_sr();
+				ret = self.ppu.borrow_mut().get_sr();
 			}
 			0x2007 => {
 				ret = self.ppu.borrow_mut().read();
