@@ -159,6 +159,7 @@ impl CPU {
 			($ea: expr, $pc: expr, $i: expr) => {
 				$ea = mmu.read_1byte(self.pc) as u16;
 				$ea = $ea.wrapping_add($i as u16);
+				$ea &= 0x00FFu16;
 				$pc = self.pc + 1;
 			}
 		}
