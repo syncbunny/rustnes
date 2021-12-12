@@ -115,6 +115,18 @@ impl APU {
 		// TODO
 	}
 
+	pub fn set_noise_cr2(&mut self, v: u8) {
+		// unused
+	}
+
+	pub fn set_noise_fq1(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_noise_fq2(&mut self, v: u8) {
+		// TODO
+	}
+
 	pub fn set_frame_counter(&mut self, v: u8) {
 		// TODO
 	}

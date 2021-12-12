@@ -110,7 +110,7 @@ impl Renderer {
 				gl::BindVertexArray(0);
 				self.check_gl_error(line!());
 			}
-        		self.window.gl_swap_window();
+       		self.window.gl_swap_window();
 
 			for event in event_pump.poll_iter() {
 				match event {

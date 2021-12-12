@@ -149,6 +149,9 @@ impl MMU {
 			0x2003 => {
 				self.ppu.borrow_mut().set_sprite_write_addr(n);
 			}
+			0x2004 => {
+				self.ppu.borrow_mut().sprite_write(n);
+			}
 			0x2005 => {
 				self.ppu.borrow_mut().set_scroll(n);
 			}
@@ -196,6 +199,15 @@ impl MMU {
 			}
 			0x400C => {
 				self.apu.borrow_mut().set_noise_cr1(n);
+			}
+			0x400D => {
+				self.apu.borrow_mut().set_noise_cr2(n);
+			}
+			0x400E => {
+				self.apu.borrow_mut().set_noise_fq1(n);
+			}
+			0x400F => {
+				self.apu.borrow_mut().set_noise_fq2(n);
 			}
 			0x4010 => {
 				self.apu.borrow_mut().set_dmc1(n);

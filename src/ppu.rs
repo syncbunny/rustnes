@@ -15,12 +15,21 @@ const CR1_SP_PATTABLE_MASK: u8 = 0x08; // 0: 0x0000, 1:0x1000
 const FLAG_ADDR_INC: u8 = 0x04; // 0: +1, 1: +32
 const CR1_NAMETABLE_MASK: u8 = 0x03;
 
+/* Control Register2 &H2001 */
+const CR2_FLAG_ENABLE_SPRITE:u8 = 0x10;
+const CR2_FLAG_ENABLE_BG:u8     = 0x08;
+
 /* Status Register &H2002 */
 const FLAG_VBLANK: u8 = 0x80;
 const FLAG_SP_HIT: u8 = 0x40;
 const SCANLINE_SPLITE_OVER: u8 = 0x20;
 const IFLAG_VBLANK: u8 = 0x7F;
 const IFLAG_SP_HIT: u8 = 0xBF;
+
+/* Sprite attributes */
+const SPRITE_ATTRIBUTE_BACK:u8 = 0x20;
+const SPRITE_ATTRIBUTE_FLIP_H:u8 = 0x40;
+const SPRITE_ATTRIBUTE_FLIP_V:u8 = 0x80;
 
 macro_rules! SET_VBLANK {
 	($sr: expr) => {
@@ -37,6 +46,18 @@ macro_rules! CLEAR_VBLANK {
 macro_rules! get_nametable {
 	($cr1: expr) => {
 		$cr1 & CR1_NAMETABLE_MASK
+	}
+}
+
+macro_rules! SET_SPRITE_HIT {
+	($sr: expr) => {
+		$sr |= FLAG_SP_HIT;
+	}
+}
+
+macro_rules! CLEAR_SPRITE_HIT {
+	($sr: expr) => {
+		$sr &= IFLAG_SP_HIT;
 	}
 }
 
@@ -80,6 +101,9 @@ pub struct PPU {
 	read_buffer: u8,
 	mem: Vec<u8>,
 	sprite_mem: Vec<u8>,
+	sprite_buffer: Vec<u8>,
+	sprite_id_buffer: Vec<u8>,
+	sprite_buffer_len: usize,
 	mirror: Mirror,
 
 	pattern_lut: Vec<u8>,
@@ -106,6 +130,9 @@ impl PPU {
 			read_buffer: 0,
 			mem: vec![0; 0x4000],
 			sprite_mem: vec![0; 256],
+			sprite_buffer: vec![0; 4*256],
+			sprite_id_buffer: vec![0; 256],
+			sprite_buffer_len: 0,
 			mirror: Mirror::VARTICAL,
 
 			pattern_lut: vec![0; 256*256*8], // Hi * Lo * x
@@ -127,10 +154,20 @@ impl PPU {
 		if self.line == 0 && self.line_clock == 0 {
 			self.frame_start();
 		}
+		if self.line_clock == 0 {
+			//println!("PPU: CLEAR_SPRITE_HIT: {:02X}", self.sr);
+			self.buffer_sprite(self.line);
+		}
 
 		self.render_bg(self.line_clock, self.line);
+		if self.cr2 & CR2_FLAG_ENABLE_SPRITE != 0 {
+			self.render_sprite(self.line_clock, self.line);
+		}
 
 		self.line_clock += 1;
+		if self.line == 260 && self.line_clock == 1 {
+			CLEAR_SPRITE_HIT!(self.sr);
+		}
 		if self.line_clock >= CLOCKS_PAR_LINE {
 			//println!("PPU: line {}", self.line);
 			self.line_clock = 0;
@@ -152,11 +189,13 @@ impl PPU {
 
 	// Mapping to 0x2000
 	pub fn set_cr1(&mut self, n:u8) {
+		//println!("PPU: set_cr1: {:02X}", n);
 		self.cr1 = n;
 	}
 
 	// Mapping to 0x2001
 	pub fn set_cr2(&mut self, n:u8) {
+		//println!("PPU: set_cr2: {:02X}", n);
 		self.cr2 = n;
 	}
 
@@ -165,16 +204,25 @@ impl PPU {
 		self.sprite_write_addr = n as usize;
 	}
 
+	// Mapping to 0x2004
+	pub fn sprite_write(&mut self, n: u8) {
+		self.sprite_mem[self.sprite_write_addr] = n;
+		self.sprite_write_addr += 1;
+		self.sprite_write_addr &= 0xFFusize;
+	}
+
 	pub fn get_sr(&mut self) -> u8 {
 		let sr:u8 = self.sr;
 
 		self.write_mode = 0;
 		CLEAR_VBLANK!(self.sr);
 
+		//println!("PPU: get_sr: {:02X}", sr);
 		return sr;
 	}
 
 	pub fn set_scroll(&mut self, v:u8) {
+		//println!("PPU: set_scroll: {:02X}", v);
 		if self.write_mode == 0 {
 			self.scroll_x = v;
 			self.write_mode = 1;
@@ -256,6 +304,7 @@ impl PPU {
 		//println!("PPU: FrameStart");
 		//let sleep_dur = time::Duration::from_millis(3000);
 		//thread::sleep(sleep_dur);
+		self.io.lock().unwrap().clear();
 	}
 
 	fn frame_end(&mut self) {
@@ -319,11 +368,88 @@ impl PPU {
 		let pat_hi = self.mem[pat_addr_hi as usize];
 		let pat = self.pattern_lut[(((pat_hi as usize)*256 + (pat_lo as usize))*8 + (xx as usize)%8) as usize];
 
-		// TODO: draw pttern, color
-		{
+		// TODO: color
+		if pat != 0 {
 			let mut io = self.io.lock().unwrap();
 			let pat:u8 = pat << 6;
 			io.draw_pixel(x, y, pat, pat, pat);
+		}
+	}
+
+	fn buffer_sprite(&mut self, y: u32) {
+		self.sprite_buffer_len = 0;
+		for sprite_id in 0..64 {
+			let sp_y = self.sprite_mem[(sprite_id*4 + 0)as usize];
+			let sp_n = self.sprite_mem[(sprite_id*4 + 1)as usize];
+			let sp_a = self.sprite_mem[(sprite_id*4 + 2)as usize];
+			let sp_x = self.sprite_mem[(sprite_id*4 + 3)as usize];
+
+			if y  < (sp_y as u32) +1 || y >= (sp_y as u32) +1+8 {
+				continue;
+			}
+			self.sprite_buffer[self.sprite_buffer_len*4 + 0] = sp_y;
+			self.sprite_buffer[self.sprite_buffer_len*4 + 1] = sp_n;
+			self.sprite_buffer[self.sprite_buffer_len*4 + 2] = sp_a;
+			self.sprite_buffer[self.sprite_buffer_len*4 + 3] = sp_x;
+			self.sprite_id_buffer[self.sprite_buffer_len] = sprite_id;
+
+			self.sprite_buffer_len += 1;
+			if (self.sprite_buffer_len == 7) {
+				break;
+			}
+		}
+	}
+
+	fn render_sprite(&mut self, x: u32, y: u32) {
+		if (y >= 239) {
+			return;
+		}
+
+		for buffer_id in (0..self.sprite_buffer_len).rev() {
+			let sprite_id: u8 = self.sprite_id_buffer[buffer_id];
+			let sp_y = self.sprite_buffer[(buffer_id*4 + 0)as usize];
+			let sp_n = self.sprite_buffer[(buffer_id*4 + 1)as usize];
+			let sp_a = self.sprite_buffer[(buffer_id*4 + 2)as usize];
+			let sp_x = self.sprite_buffer[(buffer_id*4 + 3)as usize];
+
+			if x < sp_x as u32 || x >= (sp_x as u32) +8 {
+				continue;
+			}
+
+			let mut u = x as u8 - sp_x;
+			if sp_a & SPRITE_ATTRIBUTE_FLIP_H != 0 {
+				u = 7 - u;
+			}
+			let mut v = y as u8 - sp_y - 1;
+			if sp_a & SPRITE_ATTRIBUTE_FLIP_V != 0 {
+				v = 7 - v;
+			}
+			let pat_base:u16 = get_sprite_pattern_table_addr!(self.cr1);
+			let pat_addr:u16 = pat_base + ((sp_n as u16)<< 4);
+			let pat_addr_lo:u16 = pat_addr + v as u16;
+			let pat_addr_hi:u16 = pat_addr_lo + 8;
+			let pat_lo = self.mem[pat_addr_lo as usize];
+			let pat_hi = self.mem[pat_addr_hi as usize];
+			let pat = self.pattern_lut[(((pat_hi as usize)*256 + (pat_lo as usize))*8 + (u as usize)%8) as usize];
+			if pat == 0 {
+				continue;
+			}
+
+			let mut io = self.io.lock().unwrap();
+			let pat = pat << 6;
+			let mut written:bool = false;
+			if sp_a & SPRITE_ATTRIBUTE_BACK != 0 {
+				written = io.draw_front_sprite(x, y, pat, pat, pat);
+			} else {
+				written = io.draw_front_sprite(x, y, pat, pat, pat);
+			}
+
+			if sprite_id == 0 &&
+               written && 
+               (self.cr2 & CR2_FLAG_ENABLE_BG) != 0 &&
+			   io.get_stencil(x, y) != 0 {
+				SET_SPRITE_HIT!(self.sr);
+			}
 		}
 	}
 
@@ -332,7 +458,8 @@ impl PPU {
 	}
 
     pub fn set_crom(&mut self, crom: &[u8]) {
-		self.mem[0..0x2000].copy_from_slice(crom);
+		let len: usize = if crom.len() < 0x2000 { crom.len() } else { 0x2000 };
+		self.mem[0..len].copy_from_slice(crom);
 	}
 
 	fn generate_lut(&mut self) {
