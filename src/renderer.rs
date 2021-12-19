@@ -80,13 +80,6 @@ impl Renderer {
 		let mut event_pump = self.sdl_context.event_pump().unwrap();
 
 		'running: loop {
-			// wait vbr
-			let (vbr, cond) = &*self.vbr;
-			let mut vbr = vbr.lock().unwrap();
-			while !(*vbr).in_vbr {
-				vbr = cond.wait(vbr).unwrap();
-			}
-			(*vbr).in_vbr = false;
 
 			self.check_gl_error(line!());
 			unsafe {
@@ -99,6 +92,13 @@ impl Renderer {
         		//self.window.gl_swap_window();
 			self.check_gl_error(line!());
 			{
+			// wait vbr
+			let (vbr, cond) = &*self.vbr;
+			let mut vbr = vbr.lock().unwrap();
+			while !(*vbr).in_vbr {
+				vbr = cond.wait(vbr).unwrap();
+			}
+//			(*vbr).in_vbr = false;
 				let mut io = self.io.lock().unwrap();
 				self.tex_data[0..].copy_from_slice(&io.vram[0..]);
 			}

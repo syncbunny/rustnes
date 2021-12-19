@@ -316,11 +316,9 @@ impl PPU {
 	}
 
 	fn frame_end(&mut self) {
-/*
 		let (vbr, cond) = &*self.vbr;
 		let mut vbr = vbr.lock().unwrap();
 		(*vbr).in_vbr = false;
-*/
 	}
 
 	fn render_bg(&mut self, x: u32, y: u32) {
