@@ -16,6 +16,11 @@ pub struct IO {
 	pub pad: Pad,
 }
 
+pub struct VBR {
+	pub in_vbr: bool,
+	pub frames: u32
+}
+
 impl IO {
 	pub fn new() -> IO {
 		let pad = Arc::new(Mutex::new(Pad::new()));
@@ -23,13 +28,20 @@ impl IO {
 		IO {
 			vram: vec![0; 256*240*3],
 			stencil: vec![0; 256*240],
-			pad: Pad::new()
+			pad: Pad::new(),
 		}
 	}
 
 	pub fn clear(&mut self) {
 		self.stencil.fill(0);
-		self.vram.fill(255);
+/*
+		for x in (0..256*240) {
+			self.vram[x*3 + 0] = 0;
+			self.vram[x*3 + 1] = 255;
+			self.vram[x*3 + 2] = 0;
+		}
+*/
+		self.vram.fill(0);
 	}
 
 	pub fn get_stencil(&self, x: u32, y: u32) -> u8 {
@@ -67,5 +79,14 @@ impl IO {
 			return true;
 		}
 		return false;
+	}
+}
+
+impl VBR {
+	pub fn new() -> VBR {
+		VBR {
+			in_vbr: false,
+			frames: 0
+		}
 	}
 }

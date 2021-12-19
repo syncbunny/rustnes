@@ -14,6 +14,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Condvar;
 use std::env;
 use std::thread;
 use std::time::Duration;
@@ -48,12 +49,13 @@ fn main() {
 		return;
 	}
 
+	let mut vbr = Arc::new((Mutex::new(VBR::new()), Condvar::new()));
 	let mut io = Arc::new(Mutex::new(IO::new()));
-	let mut renderer = Renderer::new(Arc::clone(&io));
+	let mut renderer = Renderer::new(Arc::clone(&io), Arc::clone(&vbr));
 	let mut event_queue = Arc::new(Mutex::new(EventQueue::new()));
 
 	thread::spawn(move|| {
-		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io), Arc::clone(&event_queue))));
+		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io), Arc::clone(&event_queue), Arc::clone(&vbr))));
 		let apu = Rc::new(RefCell::new(APU::new()));
 		let pad = Rc::new(RefCell::new(Pad::new()));
 		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&io), Arc::clone(&event_queue))));

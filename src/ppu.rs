@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Condvar;
 use std::{thread, time};
 use crate::io::*;
 use crate::events::*;
@@ -109,11 +110,12 @@ pub struct PPU {
 	pattern_lut: Vec<u8>,
 
 	io: Arc<Mutex<IO>>,
-	event_queue: Arc<Mutex<EventQueue>>
+	event_queue: Arc<Mutex<EventQueue>>,
+	vbr: Arc<(Mutex<VBR>, Condvar)>
 }
 
 impl PPU {
-	pub fn new(io:Arc<Mutex<IO>>, event_queue: Arc<Mutex<EventQueue>>) -> PPU {
+	pub fn new(io:Arc<Mutex<IO>>, event_queue: Arc<Mutex<EventQueue>>, vbr: Arc<(Mutex<VBR>, Condvar)>) -> PPU {
 		let mut ppu = PPU {
 			cr1: 0,
 			cr2: 0,
@@ -138,7 +140,8 @@ impl PPU {
 			pattern_lut: vec![0; 256*256*8], // Hi * Lo * x
 
 			io: io,
-			event_queue: event_queue
+			event_queue: event_queue,
+			vbr: vbr
 		};
 		ppu.generate_lut();
 
@@ -298,6 +301,11 @@ impl PPU {
 			let mut queue = self.event_queue.lock().unwrap();
 			queue.push(Event::new(EventType::NMI));			
 		}
+
+		let (vbr, cond) = &*self.vbr;
+		let mut vbr = vbr.lock().unwrap();
+		(*vbr).in_vbr = true;
+		cond.notify_all();
 	}
 
 	fn frame_start(&mut self) {
@@ -308,6 +316,11 @@ impl PPU {
 	}
 
 	fn frame_end(&mut self) {
+/*
+		let (vbr, cond) = &*self.vbr;
+		let mut vbr = vbr.lock().unwrap();
+		(*vbr).in_vbr = false;
+*/
 	}
 
 	fn render_bg(&mut self, x: u32, y: u32) {
@@ -439,13 +452,12 @@ impl PPU {
 			let pat = pat << 6;
 			let mut written:bool = false;
 			if sp_a & SPRITE_ATTRIBUTE_BACK != 0 {
-				written = io.draw_front_sprite(x, y, pat, pat, pat);
+				io.draw_back_sprite(x, y, pat, pat, pat);
 			} else {
-				written = io.draw_front_sprite(x, y, pat, pat, pat);
+				io.draw_front_sprite(x, y, pat, pat, pat);
 			}
 
 			if sprite_id == 0 &&
-               written && 
                (self.cr2 & CR2_FLAG_ENABLE_BG) != 0 &&
 			   io.get_stencil(x, y) != 0 {
 				SET_SPRITE_HIT!(self.sr);

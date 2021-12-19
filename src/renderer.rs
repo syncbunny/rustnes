@@ -11,6 +11,7 @@ use std::string::String;
 use std::ffi::CString;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::Condvar;
 use std::os::raw::c_void;
 use sdl2::*;
 use sdl2::event::Event;
@@ -23,6 +24,7 @@ use crate::io::*;
 
 pub struct Renderer {
 	io: Arc<Mutex<IO>>,
+	vbr: Arc<(Mutex<VBR>, Condvar)>,
 	tex_id: u32,
 	vao: u32,
 	vbo: u32,
@@ -34,7 +36,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-	pub fn new(io:Arc<Mutex<IO>>) -> Renderer {
+	pub fn new(io:Arc<Mutex<IO>>, vbr:Arc<(Mutex<VBR>, Condvar)>) -> Renderer {
 		let sdl_context = sdl2::init().unwrap();
 		let video_subsystem = sdl_context.video().unwrap();
 		let controller_subsystem = sdl_context.game_controller().unwrap();
@@ -59,6 +61,7 @@ impl Renderer {
 
 		let mut ret = Renderer {
 			io: io,
+			vbr: vbr,
 			tex_id: 0,
 			vao: 0,
 			vbo: 0,
@@ -77,6 +80,14 @@ impl Renderer {
 		let mut event_pump = self.sdl_context.event_pump().unwrap();
 
 		'running: loop {
+			// wait vbr
+			let (vbr, cond) = &*self.vbr;
+			let mut vbr = vbr.lock().unwrap();
+			while !(*vbr).in_vbr {
+				vbr = cond.wait(vbr).unwrap();
+			}
+			(*vbr).in_vbr = false;
+
 			self.check_gl_error(line!());
 			unsafe {
 				gl::ClearColor(0.6, 0.0, 0.8, 1.0);
@@ -185,7 +196,7 @@ impl Renderer {
 				}
         		}
 			//println!("render_loop:");
-        		::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
+        		//::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
     		}
 	}
 

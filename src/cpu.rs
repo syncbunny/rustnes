@@ -1676,7 +1676,7 @@ impl CPU {
 		self.clock_remain = CLOCK_TABLE[op as usize].into();
 		SET_5!(self.p); // bit 5 is always 1
 
-		self.dump();
+		//self.dump();
 	}
 	
 	pub fn reset(&mut self) {
