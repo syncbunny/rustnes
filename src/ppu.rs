@@ -333,9 +333,13 @@ impl PPU {
 
 	fn frame_start(&mut self) {
 		//println!("PPU: FrameStart");
-		//let sleep_dur = time::Duration::from_millis(3000);
-		//thread::sleep(sleep_dur);
-		self.io.lock().unwrap().clear();
+
+		let col = self.mem[SPRITE_PALETTE_BASE];
+		let r = COLOR_TABLE[(col*3 + 0) as usize];
+		let g = COLOR_TABLE[(col*3 + 1) as usize];
+		let b = COLOR_TABLE[(col*3 + 2) as usize];
+
+		self.io.lock().unwrap().clear(r, g, b);
 	}
 
 	fn frame_end(&mut self) {

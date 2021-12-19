@@ -32,16 +32,13 @@ impl IO {
 		}
 	}
 
-	pub fn clear(&mut self) {
+	pub fn clear(&mut self, r:u8, g:u8, b:u8) {
 		self.stencil.fill(0);
-/*
 		for x in (0..256*240) {
-			self.vram[x*3 + 0] = 0;
-			self.vram[x*3 + 1] = 255;
-			self.vram[x*3 + 2] = 0;
+			self.vram[x*3 + 0] = r;
+			self.vram[x*3 + 1] = g;
+			self.vram[x*3 + 2] = b;
 		}
-*/
-		self.vram.fill(0);
 	}
 
 	pub fn get_stencil(&self, x: u32, y: u32) -> u8 {
