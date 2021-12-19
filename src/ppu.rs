@@ -8,6 +8,7 @@ use crate::events::*;
 const CLOCKS_PAR_LINE: u32 = 341;
 const DRAWABLE_LINES: u32 = 240;
 const SCAN_LINES: u32 = 262;
+const BG_PALETTE_BASE: usize = 0x3F00;
 const SPRITE_PALETTE_BASE: usize = 0x3F10;
 
 /* Control Regster1 &H2000 */
@@ -128,6 +129,7 @@ pub struct PPU {
 	mirror: Mirror,
 
 	pattern_lut: Vec<u8>,
+	attr_addr_lut: Vec<usize>,
 
 	io: Arc<Mutex<IO>>,
 	event_queue: Arc<Mutex<EventQueue>>,
@@ -158,6 +160,7 @@ impl PPU {
 			mirror: Mirror::VARTICAL,
 
 			pattern_lut: vec![0; 256*256*8], // Hi * Lo * x
+			attr_addr_lut: vec![0; 32*32],
 
 			io: io,
 			event_queue: event_queue,
@@ -398,12 +401,14 @@ impl PPU {
 		let pat_lo = self.mem[pat_addr_lo as usize];
 		let pat_hi = self.mem[pat_addr_hi as usize];
 		let pat = self.pattern_lut[(((pat_hi as usize)*256 + (pat_lo as usize))*8 + (xx as usize)%8) as usize];
+		let attribute_table_base:[usize;4] = [
+			0x23C0, 0x27C0, 0x2BC0, 0x2FC0
+		];
+		let (r, g, b) = self.get_color(nametable_id, u, v, pat);
 
-		// TODO: color
 		if pat != 0 {
 			let mut io = self.io.lock().unwrap();
-			let pat:u8 = pat << 6;
-			io.draw_pixel(x, y, pat, pat, pat);
+			io.draw_pixel(x, y, r, g, b);
 		}
 	}
 
@@ -496,14 +501,54 @@ impl PPU {
 		self.mem[0..len].copy_from_slice(crom);
 	}
 
+	fn get_color(&self, nametable_id: u8, u:u32, v: u32, pat:u8) -> (u8, u8, u8) {
+		let attr_addr = self.attr_addr_lut[(v*32 +u) as usize];
+		let attribute_table_base:[usize;4] = [
+			0x23C0, 0x27C0, 0x2BC0, 0x2FC0
+		];
+		let attr_addr = attribute_table_base[nametable_id as usize] + attr_addr;
+		let mut attr = self.mem[attr_addr];
+
+		// 01|23
+		// 45|67
+		// --+--
+		// 89|AB
+		// CD|EF
+		let n = (v%4)*4 +u%4; // [0..16]
+		match n {
+			0|1|4|5 => {
+				attr = attr;
+			},
+			2|3|6|7 => {
+				attr >>= 2;
+			},
+			8|9|12|13 => {
+				attr >>= 4;
+			},
+			10|11|14|15 => {
+				attr >>= 6;
+			},
+			_ => {}
+		}
+		attr &= 0x03;
+
+		let pat = pat | (attr & 0x03) << 2;
+		let col = self.mem[BG_PALETTE_BASE + pat as usize]; // [0..3F]
+		let r = COLOR_TABLE[(col*3 + 0) as usize];
+		let g = COLOR_TABLE[(col*3 + 1) as usize];
+		let b = COLOR_TABLE[(col*3 + 2) as usize];
+
+		return (r, g, b);
+	}
+
 	fn generate_lut(&mut self) {
+		// pattern table lut
 		for hi in 0..=255 {
 			for lo in 0..=255 {
 				for x in 0..8 {
 					let pat_hi:u8 = (hi >> (7-x)) & 0x01;
 					let pat_lo:u8 = (lo >> (7-x)) & 0x01;
 					let pat:u8 = pat_hi << 1 | pat_lo;
-					//println!("LUT({:08b}, {:08b}, {}) -> {:02b}", hi, lo, x, pat);
 
 					let mut index: usize = hi as usize;
 					index *= 256;
@@ -513,6 +558,13 @@ impl PPU {
 
 					self.pattern_lut[index] = pat;
 				}
+			}
+		}
+
+		// attribute table lut
+		for v in 0..32 {
+			for u in 0..32 {
+				self.attr_addr_lut[v*32 + u] = (v/4)*8 + u/4;
 			}
 		}
 	}
