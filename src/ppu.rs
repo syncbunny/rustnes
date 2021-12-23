@@ -456,11 +456,11 @@ impl PPU {
 				continue;
 			}
 
-			let mut u = x as u8 - sp_x;
+			let mut u = (x as u8).wrapping_sub(sp_x);
 			if sp_a & SPRITE_ATTRIBUTE_FLIP_H != 0 {
 				u = 7 - u;
 			}
-			let mut v = y as u8 - sp_y - 1;
+			let mut v = (y as u8).wrapping_sub(sp_y).wrapping_sub(1);
 			if sp_a & SPRITE_ATTRIBUTE_FLIP_V != 0 {
 				v = 7 - v;
 			}
@@ -521,22 +521,23 @@ impl PPU {
 		let n = (v%4)*4 +u%4; // [0..16]
 		match n {
 			0|1|4|5 => {
-				attr = attr;
+				attr <<= 2;
 			},
 			2|3|6|7 => {
-				attr >>= 2;
+				// NOP
+				//attr >>= 2;
 			},
 			8|9|12|13 => {
-				attr >>= 4;
+				attr >>= 2;
 			},
 			10|11|14|15 => {
-				attr >>= 6;
+				attr >>= 4;
 			},
 			_ => {}
 		}
-		attr &= 0x03;
+		attr &= 0x0C;
 
-		let pat = pat | (attr & 0x03) << 2;
+		let pat = pat | attr;
 		let col = self.mem[BG_PALETTE_BASE + pat as usize]; // [0..3F]
 		let r = COLOR_TABLE[(col*3 + 0) as usize];
 		let g = COLOR_TABLE[(col*3 + 1) as usize];
