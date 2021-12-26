@@ -130,6 +130,7 @@ pub struct PPU {
 
 	pattern_lut: Vec<u8>,
 	attr_addr_lut: Vec<usize>,
+	line_buffer: Vec<u8>,
 
 	io: Arc<Mutex<IO>>,
 	event_queue: Arc<Mutex<EventQueue>>,
@@ -161,6 +162,7 @@ impl PPU {
 
 			pattern_lut: vec![0; 256*256*8], // Hi * Lo * x
 			attr_addr_lut: vec![0; 32*32],
+			line_buffer: vec![0; 256*4], // 256 x [R, G, B, Stencil]
 
 			io: io,
 			event_queue: event_queue,
@@ -183,6 +185,7 @@ impl PPU {
 		if self.line_clock == 0 {
 			//println!("PPU: CLEAR_SPRITE_HIT: {:02X}", self.sr);
 			self.buffer_sprite(self.line);
+			self.line_start();
 		}
 
 		self.render_bg(self.line_clock, self.line);
@@ -196,6 +199,7 @@ impl PPU {
 		}
 		if self.line_clock >= CLOCKS_PAR_LINE {
 			//println!("PPU: line {}", self.line);
+			self.line_end(self.line);
 			self.line_clock = 0;
 			self.line += 1;
 			if self.line == DRAWABLE_LINES {
@@ -331,6 +335,27 @@ impl PPU {
 		cond.notify_all();
 	}
 
+	fn line_start(&mut self) {
+		let col = self.mem[SPRITE_PALETTE_BASE];
+		let r = COLOR_TABLE[(col*3 + 0) as usize];
+		let g = COLOR_TABLE[(col*3 + 1) as usize];
+		let b = COLOR_TABLE[(col*3 + 2) as usize];
+		let s = 0;
+
+		for x in 0..256 {
+			self.line_buffer[x*4 +0] = r;
+			self.line_buffer[x*4 +1] = g;
+			self.line_buffer[x*4 +2] = b;
+			self.line_buffer[x*4 +3] = s;
+		}
+	}
+
+	fn line_end(&mut self, y: u32) {
+		if y < DRAWABLE_LINES {
+			self.io.lock().unwrap().draw_line(y, &self.line_buffer);
+		}
+	}
+
 	fn frame_start(&mut self) {
 		//println!("PPU: FrameStart");
 
@@ -339,7 +364,7 @@ impl PPU {
 		let g = COLOR_TABLE[(col*3 + 1) as usize];
 		let b = COLOR_TABLE[(col*3 + 2) as usize];
 
-		self.io.lock().unwrap().clear(r, g, b);
+		//self.io.lock().unwrap().clear(r, g, b);
 	}
 
 	fn frame_end(&mut self) {
@@ -411,8 +436,13 @@ impl PPU {
 		let (r, g, b) = self.get_color(nametable_id, u, v, pat);
 
 		if pat != 0 {
-			let mut io = self.io.lock().unwrap();
-			io.draw_pixel(x, y, r, g, b);
+			let stencil = self.line_buffer[(x*4 +3) as usize];
+			if stencil < 2 {
+				self.line_buffer[(x*4 +0) as usize] = r;
+				self.line_buffer[(x*4 +1) as usize] = g;
+				self.line_buffer[(x*4 +2) as usize] = b;
+				self.line_buffer[(x*4 +3) as usize] = 2;
+			}
 		}
 	}
 
@@ -442,6 +472,9 @@ impl PPU {
 
 	fn render_sprite(&mut self, x: u32, y: u32) {
 		if (y >= 239) {
+			return;
+		}
+		if (x >= 255) {
 			return;
 		}
 
@@ -480,17 +513,25 @@ impl PPU {
 			let g = COLOR_TABLE[(col*3 + 1) as usize];
 			let b = COLOR_TABLE[(col*3 + 2) as usize];
 
-			let mut io = self.io.lock().unwrap();
-			let mut written:bool = false;
+			let stencil = self.line_buffer[(x*4 +3) as usize];
 			if sp_a & SPRITE_ATTRIBUTE_BACK != 0 {
-				io.draw_back_sprite(x, y, r, g, b);
+				if stencil < 1 {
+					self.line_buffer[(x*4 +0) as usize] = r;
+					self.line_buffer[(x*4 +1) as usize] = g;
+					self.line_buffer[(x*4 +2) as usize] = b;
+					self.line_buffer[(x*4 +3) as usize] = 1;
+				}
 			} else {
-				io.draw_front_sprite(x, y, r, g, b);
+				self.line_buffer[(x*4 +0) as usize] = r;
+				self.line_buffer[(x*4 +1) as usize] = g;
+				self.line_buffer[(x*4 +2) as usize] = b;
+				self.line_buffer[(x*4 +3) as usize] = 3;
 			}
 
+			let stencil = self.line_buffer[(x*4 +3) as usize];
 			if sprite_id == 0 &&
                (self.cr2 & CR2_FLAG_ENABLE_BG) != 0 &&
-			   io.get_stencil(x, y) != 0 {
+			   stencil != 0 {
 				SET_SPRITE_HIT!(self.sr);
 			}
 		}

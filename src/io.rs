@@ -45,6 +45,15 @@ impl IO {
 		return self.stencil[(y*256 +x) as usize];
 	}
 
+	pub fn draw_line(&mut self, y: u32, line: &[u8]) {
+		for x in 0..256 {
+			self.vram[((y*256 +x)*3 +0) as usize] = line[(x*4 +0) as usize];
+			self.vram[((y*256 +x)*3 +1) as usize] = line[(x*4 +1) as usize];
+			self.vram[((y*256 +x)*3 +2) as usize] = line[(x*4 +2) as usize];
+			self.stencil[(y*256 + x) as usize] = line[(x*4 +3) as usize];
+		}
+	}
+	
 	pub fn draw_back_sprite(&mut self, x: u32, y: u32, r: u8, g: u8, b: u8) -> bool {
 		if self.stencil[(y*256 +x) as usize] <= STENCIL_BACK_SPRITE {
 			self.vram[((y*256 +x)*3 +0) as usize] = r;
