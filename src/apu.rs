@@ -1,3 +1,7 @@
+use crate::apu_frame::*;
+
+const CLOCK_DIV_FRAME: i32 = 7457;
+
 pub struct APU {
 	sw1c1: u8,         // 0x4000
 	sw1c2: u8,         // 0x4001
@@ -19,6 +23,10 @@ pub struct APU {
 	dmc4: u8,          // 0x4013
 	ch_ctrl: u8,       // 0x4015
 	frame_counter: u8, // 0x4017
+
+	clock_frame: i32,
+
+	frame: APUFrame,
 }
 
 impl APU {
@@ -44,10 +52,26 @@ impl APU {
 			dmc4: 0,
 			ch_ctrl: 0,
 			frame_counter: 0,
+
+			clock_frame:0,
+
+			frame: APUFrame::new()
 		}
 	}
 
 	pub fn reset(&mut self) {
+		// TODO
+	}
+
+	pub fn clock(&mut self) {
+		{
+			if self.clock_frame <= 0 {
+				self.frame.clock();
+				self.clock_frame = CLOCK_DIV_FRAME -1;
+			} else {
+				self.clock_frame -= 1;
+			}
+		}
 		// TODO
 	}
 

@@ -27,7 +27,7 @@ const FLAG7_MAPPER_HIGH: u8        = 0xF0;
 
 const CLOCK_DIV_CPU: i32 = 12;
 const CLOCK_DIV_PPU: i32 = 4;
-
+const CLOCK_DIV_APU: i32 = 12*7457;
 
 pub struct NES {
 	cpu: Rc<RefCell<CPU>>,
@@ -37,6 +37,7 @@ pub struct NES {
 
 	clock_cpu: i32,
 	clock_ppu: i32,
+	clock_apu: i32,
 
 	event_queue: Arc<Mutex<EventQueue>>,
 }
@@ -50,6 +51,7 @@ impl NES {
 			apu: apu,
 			clock_cpu: 0,
 			clock_ppu: 0,
+			clock_apu: 0,
 			event_queue: event_queue,
 		}
 	}
@@ -144,6 +146,16 @@ impl NES {
 				self.clock_cpu = CLOCK_DIV_CPU -1;
 			} else {
 				self.clock_cpu -= 1;
+			}
+		}
+
+		{
+			let mut apu = self.apu.borrow_mut();
+			if self.clock_apu <= 0 {
+				apu.clock();
+				self.clock_apu = CLOCK_DIV_APU -1;
+			} else {
+				self.clock_apu -= 1;
 			}
 		}
 	}

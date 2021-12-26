@@ -19,8 +19,13 @@ use sdl2::video::GLProfile;
 use sdl2::keyboard::Keycode;
 use sdl2::video::Window;
 use sdl2::video::GLContext;
+use sdl2::audio::*;
 use gl::types::{GLuint};
 use crate::io::*;
+
+pub struct AudioRenderer {
+	phase: u32
+}
 
 pub struct Renderer {
 	io: Arc<Mutex<IO>>,
@@ -32,13 +37,31 @@ pub struct Renderer {
 	sdl_context: Sdl,
 	shader_program: u32,
 	window: Window,
+	audio_device: AudioDevice<AudioRenderer>,
 	gl_context: GLContext,
+}
+
+impl AudioCallback for AudioRenderer {
+	type Channel = f32;
+	
+	fn callback(&mut self, out: &mut[f32]) {
+		for x in out.iter_mut() {
+			*x = if self.phase < 220 {
+				0.25
+			} else {
+				-0.25
+			};
+			self.phase += 1;
+			self.phase %= 440;
+		}
+	}
 }
 
 impl Renderer {
 	pub fn new(io:Arc<Mutex<IO>>, vbr:Arc<(Mutex<VBR>, Condvar)>) -> Renderer {
 		let sdl_context = sdl2::init().unwrap();
 		let video_subsystem = sdl_context.video().unwrap();
+		let audio_subsystem = sdl_context.audio().unwrap();
 		let controller_subsystem = sdl_context.game_controller().unwrap();
 
 		let nr_controller = controller_subsystem.num_joysticks().unwrap();
@@ -59,6 +82,16 @@ impl Renderer {
 		debug_assert_eq!(gl_attr.context_profile(), GLProfile::Core);
 		debug_assert_eq!(gl_attr.context_version(), (3, 3));
 
+		let d_spec = AudioSpecDesired {
+			freq: Some(44100),
+			channels: Some(1),
+			//samples: Some(735) // 44100/60
+			samples: None
+		};
+		let audio_device = audio_subsystem.open_playback(None, &d_spec, |spec| {
+			AudioRenderer {phase:0}
+		}).unwrap();
+
 		let mut ret = Renderer {
 			io: io,
 			vbr: vbr,
@@ -69,14 +102,17 @@ impl Renderer {
 			shader_program: 0,
 			sdl_context: sdl_context,
 			gl_context: ctx,
-			window: window
+			window: window,
+			audio_device: audio_device
 		};
 
 		ret.init_gl();
+
 		return ret;
 	}
 
 	pub fn event_loop (&mut self) {
+		self.audio_device.resume();
 		let mut event_pump = self.sdl_context.event_pump().unwrap();
 
 		'running: loop {

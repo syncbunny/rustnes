@@ -4,6 +4,7 @@ mod mmu;
 mod cpu;
 mod ppu;
 mod apu;
+mod apu_frame;
 mod pad;
 mod nes;
 mod renderer;
