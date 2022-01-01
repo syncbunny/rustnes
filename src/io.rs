@@ -9,11 +9,18 @@ const STENCIL_NONE: u8 = 0;
 const STENCIL_BACK_SPRITE: u8 = 1;
 const STENCIL_BG: u8 = 2;
 const STENCIL_FRONT_SPRITE: u8 = 3;
+const AUDIO_BUFFER_SIZE: usize = 4096;
 
 pub struct IO {
 	pub vram: Vec<u8>,
 	pub stencil: Vec<u8>,
+	pub audio: Vec<f32>,
 	pub pad: Pad,
+
+	wp_audio: usize,
+	rp_audio: usize,
+
+	audio_lut: Vec<f32>,
 }
 
 pub struct VBR {
@@ -25,11 +32,20 @@ impl IO {
 	pub fn new() -> IO {
 		let pad = Arc::new(Mutex::new(Pad::new()));
 
-		IO {
+		let mut ret = IO {
 			vram: vec![0; 256*240*3],
 			stencil: vec![0; 256*240],
+
+			audio: vec![0.0; AUDIO_BUFFER_SIZE],
+			wp_audio: 0,
+			rp_audio: 0,
+			audio_lut: vec![0.0; 256],
+
 			pad: Pad::new(),
-		}
+		};
+		ret.generate_lut();
+		
+		return ret;
 	}
 
 	pub fn clear(&mut self, r:u8, g:u8, b:u8) {
@@ -85,6 +101,33 @@ impl IO {
 			return true;
 		}
 		return false;
+	}
+
+	pub fn write_audio(&mut self, v: u8) {
+		self.audio[self.wp_audio] = self.audio_lut[v as usize];
+		self.wp_audio += 1;
+		if self.wp_audio >= AUDIO_BUFFER_SIZE {
+			self.wp_audio = 0;
+		}
+	}
+
+	pub fn read_audio(&mut self, buf: &mut[f32]) {
+		for i in 0..buf.len() {
+			buf[i] = self.audio[self.rp_audio];
+			self.rp_audio += 1;
+			if self.rp_audio >= AUDIO_BUFFER_SIZE {
+				self.rp_audio = 0;
+			}
+		}
+	}
+
+	fn generate_lut(&mut self) {
+		for x in 0..256 {
+			let a = x as f32/256.0; // [0..1]
+			let a = a - 0.5; // [-0.5..0.5]
+			let a = a * 0.5; // [-0.25..0.25]
+			self.audio_lut[x] = a;
+		}
 	}
 }
 

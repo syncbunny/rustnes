@@ -24,7 +24,7 @@ use gl::types::{GLuint};
 use crate::io::*;
 
 pub struct AudioRenderer {
-	phase: u32
+	io: Arc<Mutex<IO>>
 }
 
 pub struct Renderer {
@@ -45,14 +45,10 @@ impl AudioCallback for AudioRenderer {
 	type Channel = f32;
 	
 	fn callback(&mut self, out: &mut[f32]) {
-		for x in out.iter_mut() {
-			*x = if self.phase < 220 {
-				0.25
-			} else {
-				-0.25
-			};
-			self.phase += 1;
-			self.phase %= 440;
+		let mut io = self.io.lock().unwrap();
+		io.read_audio(out);
+		for a in out {
+			println!("{}", a);
 		}
 	}
 }
@@ -86,10 +82,12 @@ impl Renderer {
 			freq: Some(44100),
 			channels: Some(1),
 			//samples: Some(735) // 44100/60
-			samples: None
+			samples: Some(2048)
 		};
 		let audio_device = audio_subsystem.open_playback(None, &d_spec, |spec| {
-			AudioRenderer {phase:0}
+			AudioRenderer {
+				io:Arc::clone(&io)
+			}
 		}).unwrap();
 
 		let mut ret = Renderer {

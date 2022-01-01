@@ -5,6 +5,7 @@ mod cpu;
 mod ppu;
 mod apu;
 mod apu_frame;
+mod apu_triangle;
 mod pad;
 mod nes;
 mod renderer;
@@ -57,7 +58,7 @@ fn main() {
 
 	thread::spawn(move|| {
 		let ppu = Rc::new(RefCell::new(PPU::new(Arc::clone(&io), Arc::clone(&event_queue), Arc::clone(&vbr))));
-		let apu = Rc::new(RefCell::new(APU::new()));
+		let apu = Rc::new(RefCell::new(APU::new(Arc::clone(&io))));
 		let pad = Rc::new(RefCell::new(Pad::new()));
 		let mmu = Rc::new(RefCell::new(MMU::new(Rc::clone(&ppu), Rc::clone(&apu), Arc::clone(&io), Arc::clone(&event_queue))));
 		let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));

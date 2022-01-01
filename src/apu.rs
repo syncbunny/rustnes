@@ -1,6 +1,13 @@
+use std::sync::Arc;
+use std::sync::Mutex;
+
+use crate::io::*;
 use crate::apu_frame::*;
+use crate::apu_triangle::*;
 
 const CLOCK_DIV_FRAME: i32 = 7457;
+const CLOCK_FQ: u32 = 1789772; // NTSC
+const RENDER_FQ: u32 = 44100;
 
 pub struct APU {
 	sw1c1: u8,         // 0x4000
@@ -27,10 +34,14 @@ pub struct APU {
 	clock_frame: i32,
 
 	frame: APUFrame,
+	triangle: APUTriangle,
+
+	render_clock: u32,
+	io: Arc<Mutex<IO>>
 }
 
 impl APU {
-	pub fn new() -> APU {
+	pub fn new(io:Arc<Mutex<IO>>) -> APU {
 		APU {
 			sw1c1: 0,
 			sw1c2: 0,
@@ -55,7 +66,11 @@ impl APU {
 
 			clock_frame:0,
 
-			frame: APUFrame::new()
+			frame: APUFrame::new(),
+			triangle: APUTriangle::new(Arc::clone(&io)),
+
+			render_clock: 0,
+			io: io
 		}
 	}
 
@@ -64,6 +79,7 @@ impl APU {
 	}
 
 	pub fn clock(&mut self) {
+		self.triangle.clock();
 		{
 			if self.clock_frame <= 0 {
 				self.frame.clock();
@@ -71,6 +87,14 @@ impl APU {
 			} else {
 				self.clock_frame -= 1;
 			}
+		}
+
+		if self.render_clock == 0 {
+			let mut io = self.io.lock().unwrap();
+			io.write_audio(self.triangle.val);
+			self.render_clock = CLOCK_FQ/RENDER_FQ -1;
+		} else {
+			self.render_clock -= 1;
 		}
 		// TODO
 	}
@@ -120,19 +144,19 @@ impl APU {
 	}
 
 	pub fn set_tw_cr1(&mut self, v: u8) {
-		// TODO
+		self.twc = self.triangle.set_cr1(v);
 	}
 
-	pub fn set_tw_cr2(&mut self, v: u8) {
+	pub fn set_tw_cr2(&mut self, _v: u8) {
 		// unused io
 	}
 
 	pub fn set_tw_fq1(&mut self, v: u8) {
-		// TODO
+		self.twfq1 = self.triangle.set_fq1(v);
 	}
 
 	pub fn set_tw_fq2(&mut self, v: u8) {
-		// TODO
+		self.twfq2 = self.triangle.set_fq2(v);
 	}
 
 	pub fn set_noise_cr1(&mut self, v: u8) {
