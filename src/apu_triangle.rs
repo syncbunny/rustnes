@@ -50,7 +50,7 @@ impl APUTriangle {
 
 	pub fn set_fq1(&mut self, v:u8) -> u8 {
 		self.fq1 = v;
-		self.clock_div = (self.fq2 as u16) << 8;
+		self.clock_div = ((self.fq2 & 0x07) as u16) << 8;
 		self.clock_div |= self.fq1 as u16;
 		//self.clock = 0;
 		return self.fq1;
@@ -58,7 +58,7 @@ impl APUTriangle {
 
 	pub fn set_fq2(&mut self, v:u8) -> u8 {
 		self.fq2 = v;
-		self.clock_div = (self.fq2 as u16) << 8;
+		self.clock_div = ((self.fq2 & 0x07) as u16) << 8;
 		self.clock_div |= self.fq1 as u16;
 		//self.clock = 0;
 		return self.fq2;

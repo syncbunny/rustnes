@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use crate::pad::*;
+use crate::ringbuffer::*;
 
 const STENCIL_NONE: u8 = 0;
 const STENCIL_BACK_SPRITE: u8 = 1;
@@ -14,7 +15,7 @@ const AUDIO_BUFFER_SIZE: usize = 4096;
 pub struct IO {
 	pub vram: Vec<u8>,
 	pub stencil: Vec<u8>,
-	pub audio: Vec<f32>,
+	pub audio: RingBuffer<f32>,
 	pub pad: Pad,
 
 	wp_audio: usize,
@@ -36,7 +37,7 @@ impl IO {
 			vram: vec![0; 256*240*3],
 			stencil: vec![0; 256*240],
 
-			audio: vec![0.0; AUDIO_BUFFER_SIZE],
+			audio: RingBuffer::new(AUDIO_BUFFER_SIZE, 0.0),
 			wp_audio: 0,
 			rp_audio: 0,
 			audio_lut: vec![0.0; 256],
@@ -103,20 +104,15 @@ impl IO {
 		return false;
 	}
 
-	pub fn write_audio(&mut self, v: u8) {
-		self.audio[self.wp_audio] = self.audio_lut[v as usize];
-		self.wp_audio += 1;
-		if self.wp_audio >= AUDIO_BUFFER_SIZE {
-			self.wp_audio = 0;
-		}
+	pub fn write_audio(&mut self, v: u8) -> bool {
+		return self.audio.write(self.audio_lut[v as usize]);
 	}
 
 	pub fn read_audio(&mut self, buf: &mut[f32]) {
 		for i in 0..buf.len() {
-			buf[i] = self.audio[self.rp_audio];
-			self.rp_audio += 1;
-			if self.rp_audio >= AUDIO_BUFFER_SIZE {
-				self.rp_audio = 0;
+			match self.audio.read() {
+				Some(v) => {buf[i] = v},
+				None => {buf[i] = 0.0}
 			}
 		}
 	}
@@ -125,7 +121,7 @@ impl IO {
 		for x in 0..256 {
 			let a = x as f32/256.0; // [0..1]
 			let a = a - 0.5; // [-0.5..0.5]
-			let a = a * 0.5; // [-0.25..0.25]
+			//let a = a * 0.5; // [-0.25..0.25]
 			self.audio_lut[x] = a;
 		}
 	}

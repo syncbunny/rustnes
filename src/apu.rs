@@ -37,6 +37,7 @@ pub struct APU {
 	triangle: APUTriangle,
 
 	render_clock: u32,
+	stall: bool,
 	io: Arc<Mutex<IO>>
 }
 
@@ -70,6 +71,7 @@ impl APU {
 			triangle: APUTriangle::new(Arc::clone(&io)),
 
 			render_clock: 0,
+			stall: false,
 			io: io
 		}
 	}
@@ -79,19 +81,25 @@ impl APU {
 	}
 
 	pub fn clock(&mut self) {
-		self.triangle.clock();
-		{
-			if self.clock_frame <= 0 {
-				self.frame.clock();
-				self.clock_frame = CLOCK_DIV_FRAME -1;
-			} else {
-				self.clock_frame -= 1;
+		if !self.stall {
+			self.triangle.clock();
+			{
+				if self.clock_frame <= 0 {
+					self.frame.clock();
+					self.clock_frame = CLOCK_DIV_FRAME -1;
+				} else {
+					self.clock_frame -= 1;
+				}
 			}
 		}
 
 		if self.render_clock == 0 {
 			let mut io = self.io.lock().unwrap();
-			io.write_audio(self.triangle.val);
+			if io.write_audio(self.triangle.val) {
+				self.stall = false;
+			} else {
+				self.stall = true;
+			}
 			self.render_clock = CLOCK_FQ/RENDER_FQ -1;
 		} else {
 			self.render_clock -= 1;

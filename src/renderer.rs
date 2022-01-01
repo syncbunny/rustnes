@@ -47,9 +47,6 @@ impl AudioCallback for AudioRenderer {
 	fn callback(&mut self, out: &mut[f32]) {
 		let mut io = self.io.lock().unwrap();
 		io.read_audio(out);
-		for a in out {
-			println!("{}", a);
-		}
 	}
 }
 
@@ -82,7 +79,7 @@ impl Renderer {
 			freq: Some(44100),
 			channels: Some(1),
 			//samples: Some(735) // 44100/60
-			samples: Some(2048)
+			samples: Some(1024)
 		};
 		let audio_device = audio_subsystem.open_playback(None, &d_spec, |spec| {
 			AudioRenderer {

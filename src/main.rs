@@ -11,6 +11,7 @@ mod nes;
 mod renderer;
 mod io;
 mod events;
+mod ringbuffer;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -30,6 +31,7 @@ use crate::nes::*;
 use crate::renderer::*;
 use crate::io::*;
 use crate::events::*;
+use crate::ringbuffer::*;
 
 struct Configure {
 	cartridge: String,
