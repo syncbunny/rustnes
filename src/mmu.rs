@@ -226,7 +226,7 @@ impl MMU {
 				io.pad.out(n);
 			}
 			0x4017 => {
-				self.apu.borrow_mut().set_frame_counter(n);
+				self.apu.borrow_mut().set_frame_cr(n);
 			}
 			_ => {
 				panic!("mmi.write: unmapped address: {:x}", addr);

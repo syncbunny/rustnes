@@ -2,6 +2,9 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use crate::io::*;
+use crate::apu::LENGTH_COUNTER_LUT;
+
+const LENGTH_COUNTER_OFF_MASK:u8 = 0x80;
 
 pub struct APUTriangle {
 	pub val: u8,
@@ -11,6 +14,7 @@ pub struct APUTriangle {
 
 	clock: u16,
 	clock_div: u16,
+	length_counter: u8,
 	seq: usize,
 
 	io: Arc<Mutex<IO>>,
@@ -26,6 +30,7 @@ impl APUTriangle {
 
 			clock: 0,
 			clock_div: 0,
+			length_counter: 0,
 			seq: 0,
 
 			io: io
@@ -35,11 +40,20 @@ impl APUTriangle {
 	pub fn clock(&mut self) {
 		if self.clock == 0 {
 			// TODO: linear counter, length counter
-			self.next_seq();
+			if self.length_counter != 0 {
+				self.next_seq();
+				self.clock = self.clock_div;
+			}			
 			self.clock = self.clock_div;
 			//println!("triangle: clock_div = {}", self.clock_div);
 		} else {
 			self.clock -= 1;
+		}
+	}
+
+	pub fn length_clock(&mut self) {
+		if (self.cr1 & LENGTH_COUNTER_OFF_MASK == 0) && self.length_counter > 0 {
+			self.length_counter -= 1;
 		}
 	}
 
@@ -52,6 +66,7 @@ impl APUTriangle {
 		self.fq1 = v;
 		self.clock_div = ((self.fq2 & 0x07) as u16) << 8;
 		self.clock_div |= self.fq1 as u16;
+		self.length_counter = LENGTH_COUNTER_LUT[v as usize];
 		//self.clock = 0;
 		return self.fq1;
 	}
