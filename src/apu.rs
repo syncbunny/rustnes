@@ -122,13 +122,13 @@ impl APU {
 	pub fn clock(&mut self) {
 		if !self.stall {
 			self.triangle.borrow_mut().clock();
-			{
-				if self.clock_frame <= 0 {
-					self.frame.clock();
-					self.clock_frame = CLOCK_DIV_FRAME -1;
-				} else {
-					self.clock_frame -= 1;
-				}
+		}
+		{
+			if self.clock_frame <= 0 {
+				self.frame.clock();
+				self.clock_frame = CLOCK_DIV_FRAME -1;
+			} else {
+				self.clock_frame -= 1;
 			}
 		}
 

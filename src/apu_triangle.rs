@@ -15,6 +15,8 @@ pub struct APUTriangle {
 	clock: u16,
 	clock_div: u16,
 	length_counter: u8,
+	linear_counter: u8,
+	linear_reload: bool,
 	seq: usize,
 
 	io: Arc<Mutex<IO>>,
@@ -31,6 +33,8 @@ impl APUTriangle {
 			clock: 0,
 			clock_div: 0,
 			length_counter: 0,
+			linear_counter: 0,
+			linear_reload: false,
 			seq: 0,
 
 			io: io
@@ -39,8 +43,7 @@ impl APUTriangle {
 
 	pub fn clock(&mut self) {
 		if self.clock == 0 {
-			// TODO: linear counter, length counter
-			if self.length_counter != 0 {
+			if self.length_counter != 0 && self.linear_counter != 0 {
 				self.next_seq();
 				self.clock = self.clock_div;
 			}			
@@ -57,8 +60,22 @@ impl APUTriangle {
 		}
 	}
 
+	pub fn linear_clock(&mut self) {
+		if self.linear_reload {
+			self.linear_counter = self.cr1 & 0x7F;
+		} else {
+			if self.linear_counter > 0 {
+				self.linear_counter -= 1;
+			}
+		}
+		if (self.cr1 & LENGTH_COUNTER_OFF_MASK) == 0 {
+			self.linear_reload = false;
+		}
+	}
+
 	pub fn set_cr1(&mut self, v:u8) -> u8 {
 		self.cr1 = v;
+		self.linear_counter = self.cr1 & 0x7F;
 		return self.cr1;
 	}
 
@@ -75,6 +92,7 @@ impl APUTriangle {
 		self.fq2 = v;
 		self.clock_div = ((self.fq2 & 0x07) as u16) << 8;
 		self.clock_div |= self.fq1 as u16;
+		self.linear_reload = true;
 		//self.clock = 0;
 		return self.fq2;
 	}

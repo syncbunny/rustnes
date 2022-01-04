@@ -23,11 +23,19 @@ impl APUFrame {
 		if self.cr & SEQ_MODE_MASK == 0 {
 			// 4-step
 			match self.seq {
+				0 => {
+					self.triangle.borrow_mut().linear_clock();
+				}
 				1 => {
 					self.triangle.borrow_mut().length_clock();
+					self.triangle.borrow_mut().linear_clock();
+				}
+				2 => {
+					self.triangle.borrow_mut().linear_clock();
 				}
 				3 => {
 					self.triangle.borrow_mut().length_clock();
+					self.triangle.borrow_mut().linear_clock();
 				}
 				_ => {}
 			}
@@ -41,9 +49,20 @@ impl APUFrame {
 			match self.seq {
 				0 => {
 					self.triangle.borrow_mut().length_clock();
+					self.triangle.borrow_mut().linear_clock();
+				}
+				1 => {
+					self.triangle.borrow_mut().linear_clock();
 				}
 				2 => {
 					self.triangle.borrow_mut().length_clock();
+					self.triangle.borrow_mut().linear_clock();
+				}
+				3 => {
+					self.triangle.borrow_mut().linear_clock();
+				}
+				4 => {
+					/* NOP */
 				}
 				_ => {}
 			}
