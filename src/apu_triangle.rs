@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use crate::io::*;
 use crate::apu::LENGTH_COUNTER_LUT;
 
 const LENGTH_COUNTER_OFF_MASK:u8 = 0x80;
@@ -18,12 +17,10 @@ pub struct APUTriangle {
 	linear_counter: u8,
 	linear_reload: bool,
 	seq: usize,
-
-	io: Arc<Mutex<IO>>,
 }
 
 impl APUTriangle {
-	pub fn new(io:Arc<Mutex<IO>>) -> APUTriangle {
+	pub fn new() -> APUTriangle {
 		APUTriangle {
 			val: 0,
 			cr1: 0,
@@ -36,8 +33,6 @@ impl APUTriangle {
 			linear_counter: 0,
 			linear_reload: false,
 			seq: 0,
-
-			io: io
 		}
 	}
 

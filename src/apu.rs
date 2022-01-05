@@ -80,7 +80,7 @@ pub struct APU {
 
 impl APU {
 	pub fn new(io:Arc<Mutex<IO>>) -> APU {
-		let triangle = Rc::new(RefCell::new(APUTriangle::new(Arc::clone(&io))));
+		let triangle = Rc::new(RefCell::new(APUTriangle::new()));
 	
 		APU {
 			sw1c1: 0,
