@@ -6,6 +6,7 @@ use once_cell::sync::Lazy;
 
 use crate::io::*;
 use crate::apu_frame::*;
+use crate::apu_square::*;
 use crate::apu_triangle::*;
 use crate::apu_noise::*;
 
@@ -80,6 +81,8 @@ pub struct APU {
 	clock_frame: i32,
 
 	frame: APUFrame,
+	square1: Rc<RefCell<APUSquare>>,
+	square2: Rc<RefCell<APUSquare>>,
 	triangle: Rc<RefCell<APUTriangle>>,
 	noise: Rc<RefCell<APUNoise>>,
 
@@ -90,6 +93,8 @@ pub struct APU {
 
 impl APU {
 	pub fn new(io:Arc<Mutex<IO>>) -> APU {
+		let square1 = Rc::new(RefCell::new(APUSquare::new()));
+		let square2 = Rc::new(RefCell::new(APUSquare::new()));
 		let triangle = Rc::new(RefCell::new(APUTriangle::new()));
 		let noise = Rc::new(RefCell::new(APUNoise::new()));
 	
@@ -121,6 +126,8 @@ impl APU {
 				Rc::clone(&triangle),
 				Rc::clone(&noise)
 			),
+			square1: square1,
+			square2: square2,
 			triangle: triangle, 
 			noise: noise,
 
@@ -136,6 +143,8 @@ impl APU {
 
 	pub fn clock(&mut self) {
 		if !self.stall {
+			self.square1.borrow_mut().clock();
+			self.square2.borrow_mut().clock();
 			self.triangle.borrow_mut().clock();
 			self.noise.borrow_mut().clock();
 		}
@@ -162,39 +171,38 @@ impl APU {
 		} else {
 			self.render_clock -= 1;
 		}
-		// TODO
 	}
 
 	pub fn set_sw1_cr1(&mut self, v: u8) {
-		// TODO
+		self.sw1c1 = self.square1.borrow_mut().set_cr1(v);
 	}
 
 	pub fn set_sw1_cr2(&mut self, v: u8) {
-		// TODO
+		self.sw1c2 = self.square1.borrow_mut().set_cr2(v);
 	}
 
 	pub fn set_sw1_fq1(&mut self, v: u8) {
-		// TODO
+		self.sw1fq1 = self.square1.borrow_mut().set_fq1(v);
 	}
 
 	pub fn set_sw1_fq2(&mut self, v: u8) {
-		// TODO
+		self.sw1fq2 = self.square1.borrow_mut().set_fq2(v);
 	}
 
 	pub fn set_sw2_cr1(&mut self, v: u8) {
-		// TODO
+		self.sw2c1 = self.square2.borrow_mut().set_cr1(v);
 	}
 
 	pub fn set_sw2_cr2(&mut self, v: u8) {
-		// TODO
+		self.sw2c2 = self.square2.borrow_mut().set_cr2(v);
 	}
 
 	pub fn set_sw2_fq1(&mut self, v: u8) {
-		// TODO
+		self.sw2fq1 = self.square2.borrow_mut().set_fq1(v);
 	}
 
 	pub fn set_sw2_fq2(&mut self, v: u8) {
-		// TODO
+		self.sw2fq2 = self.square2.borrow_mut().set_fq2(v);
 	}
 
 	pub fn set_dmc1(&mut self, v: u8) {
@@ -206,9 +214,10 @@ impl APU {
 	}
 
 	pub fn set_ch_ctrl(&mut self, v: u8) {
+		self.square1.borrow_mut().set_ch_ctrl(v&CH_CTRL_SQUARE_1);
+		self.square2.borrow_mut().set_ch_ctrl(v&CH_CTRL_SQUARE_2);
 		self.triangle.borrow_mut().set_ch_ctrl(v);
 		self.noise.borrow_mut().set_ch_ctrl(v);
-		// TODO
 	}
 
 	pub fn set_tw_cr1(&mut self, v: u8) {
