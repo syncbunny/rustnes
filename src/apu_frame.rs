@@ -1,21 +1,27 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::apu_triangle::*;
+use crate::apu_noise::*;
 
 const SEQ_MODE_MASK: u8 = 0x80;
 
 pub struct APUFrame {
 	cr: u8,
 	seq: u8,
-	triangle: Rc<RefCell<APUTriangle>>
+	triangle: Rc<RefCell<APUTriangle>>,
+	noise: Rc<RefCell<APUNoise>>
 }
 
 impl APUFrame {
-	pub fn new(triangle: Rc<RefCell<APUTriangle>>) -> APUFrame {
+	pub fn new(
+			triangle: Rc<RefCell<APUTriangle>>,
+			noise: Rc<RefCell<APUNoise>>
+		) -> APUFrame {
 		APUFrame {
 			cr: 0,
 			seq: 0,
-			triangle: triangle
+			triangle: triangle,
+			noise: noise
 		}
 	}
 
@@ -25,17 +31,30 @@ impl APUFrame {
 			match self.seq {
 				0 => {
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				1 => {
 					self.triangle.borrow_mut().length_clock();
+					self.noise.borrow_mut().length_clock();
+
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				2 => {
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				3 => {
 					self.triangle.borrow_mut().length_clock();
+					self.noise.borrow_mut().length_clock();
+
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
+					// TODO IRQ
 				}
 				_ => {}
 			}
@@ -49,17 +68,29 @@ impl APUFrame {
 			match self.seq {
 				0 => {
 					self.triangle.borrow_mut().length_clock();
+					self.noise.borrow_mut().length_clock();
+
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				1 => {
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				2 => {
 					self.triangle.borrow_mut().length_clock();
+					self.noise.borrow_mut().length_clock();
+
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				3 => {
 					self.triangle.borrow_mut().linear_clock();
+
+					self.noise.borrow_mut().envelope_clock();
 				}
 				4 => {
 					/* NOP */

@@ -5,7 +5,9 @@ mod cpu;
 mod ppu;
 mod apu;
 mod apu_frame;
+mod apu_envelope;
 mod apu_triangle;
+mod apu_noise;
 mod pad;
 mod nes;
 mod renderer;
@@ -48,7 +50,7 @@ fn main() {
 		nestest: false,
 	};
 	analyze_arg(&mut config);
-	if (config.cartridge.is_empty()) {
+	if config.cartridge.is_empty() {
 		println!("Usage: rustnes [--entry address] cartridge");
 		return;
 	}
@@ -97,7 +99,7 @@ fn analyze_arg(config:&mut Configure) {
 	let mut cnt = 0;
 	let mut option = Option::NONE;
 	for arg in args {
-		if (cnt == 0) {
+		if cnt == 0 {
 			cnt += 1;
 			continue;
 		}

@@ -109,7 +109,7 @@ impl Renderer {
 	pub fn event_loop (&mut self) {
 		self.audio_device.resume();
 		let mut event_pump = self.sdl_context.event_pump().unwrap();
-
+		let mut first_time: bool = true;
 		'running: loop {
 
 			self.check_gl_error(line!());
@@ -120,16 +120,18 @@ impl Renderer {
 				self.check_gl_error(line!());
 			}
 
-        		//self.window.gl_swap_window();
 			self.check_gl_error(line!());
 			{
-			// wait vbr
-			let (vbr, cond) = &*self.vbr;
-			let mut vbr = vbr.lock().unwrap();
-			while !(*vbr).in_vbr {
-				vbr = cond.wait(vbr).unwrap();
-			}
-//			(*vbr).in_vbr = false;
+				if first_time {
+					first_time = false;
+				} else {
+					// wait vbr
+					let (vbr, cond) = &*self.vbr;
+					let mut vbr = vbr.lock().unwrap();
+					while !(*vbr).in_vbr {
+						vbr = cond.wait(vbr).unwrap();
+					}
+				}
 				let mut io = self.io.lock().unwrap();
 				self.tex_data[0..].copy_from_slice(&io.vram[0..]);
 			}

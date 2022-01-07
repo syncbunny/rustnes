@@ -44,7 +44,6 @@ impl IO {
 
 			pad: Pad::new(),
 		};
-		ret.generate_lut();
 		
 		return ret;
 	}
@@ -104,8 +103,8 @@ impl IO {
 		return false;
 	}
 
-	pub fn write_audio(&mut self, v: u8) -> bool {
-		return self.audio.write(self.audio_lut[v as usize]);
+	pub fn write_audio(&mut self, v: f32) -> bool {
+		return self.audio.write(v);
 	}
 
 	pub fn read_audio(&mut self, buf: &mut[f32]) {
@@ -114,15 +113,6 @@ impl IO {
 				Some(v) => {buf[i] = v},
 				None => {buf[i] = 0.0}
 			}
-		}
-	}
-
-	fn generate_lut(&mut self) {
-		for x in 0..256 {
-			let a = x as f32/256.0; // [0..1]
-			let a = a - 0.5; // [-0.5..0.5]
-			//let a = a * 0.5; // [-0.25..0.25]
-			self.audio_lut[x] = a;
 		}
 	}
 }
