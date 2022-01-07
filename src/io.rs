@@ -17,11 +17,6 @@ pub struct IO {
 	pub stencil: Vec<u8>,
 	pub audio: RingBuffer<f32>,
 	pub pad: Pad,
-
-	wp_audio: usize,
-	rp_audio: usize,
-
-	audio_lut: Vec<f32>,
 }
 
 pub struct VBR {
@@ -38,9 +33,6 @@ impl IO {
 			stencil: vec![0; 256*240],
 
 			audio: RingBuffer::new(AUDIO_BUFFER_SIZE, 0.0),
-			wp_audio: 0,
-			rp_audio: 0,
-			audio_lut: vec![0.0; 256],
 
 			pad: Pad::new(),
 		};
