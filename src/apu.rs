@@ -79,6 +79,7 @@ pub struct APU {
 	frame_cr: u8,      // 0x4017
 
 	clock_frame: i32,
+	clock_flg: bool,
 
 	frame: APUFrame,
 	square1: Rc<RefCell<APUSquare>>,
@@ -121,8 +122,11 @@ impl APU {
 			frame_cr: 0,
 
 			clock_frame:0,
+			clock_flg: true,
 
 			frame: APUFrame::new(
+				Rc::clone(&square1),
+				Rc::clone(&square2),
 				Rc::clone(&triangle),
 				Rc::clone(&noise)
 			),
@@ -143,10 +147,15 @@ impl APU {
 
 	pub fn clock(&mut self) {
 		if !self.stall {
-			self.square1.borrow_mut().clock();
-			self.square2.borrow_mut().clock();
+			if self.clock_flg {
+				self.square1.borrow_mut().clock();
+				self.noise.borrow_mut().clock();
+				self.clock_flg = false;
+			} else {
+				self.square2.borrow_mut().clock();
+				self.clock_flg = true;
+			}
 			self.triangle.borrow_mut().clock();
-			self.noise.borrow_mut().clock();
 		}
 		{
 			if self.clock_frame <= 0 {
@@ -160,6 +169,8 @@ impl APU {
 		if self.render_clock == 0 {
 			let mut io = self.io.lock().unwrap();
 			let mut val: f32 = 0.0;
+			val += self.square1.borrow().val;
+			val += self.square2.borrow().val;
 			val += self.triangle.borrow().val;
 			val += self.noise.borrow().val;
 			if io.write_audio(val) {

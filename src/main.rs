@@ -6,6 +6,7 @@ mod ppu;
 mod apu;
 mod apu_frame;
 mod apu_envelope;
+mod apu_sweep;
 mod apu_square;
 mod apu_triangle;
 mod apu_noise;

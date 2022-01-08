@@ -1,5 +1,5 @@
 pub struct APUEnvelope {
-	pub val: u8,
+	val: u8,
 	cr: u8,
 
 	reset: bool,
