@@ -22,6 +22,7 @@ pub const CH_CTRL_SQUARE_2:u8 = 0x02;
 pub const CH_CTRL_TRIANGLE:u8 = 0x04;
 pub const CH_CTRL_NOISE:u8 = 0x08;
 pub const CH_CTRL_DMC:u8 = 0x10;
+pub const CH_CTRL_INTERRUPT:u8 = 0x40;
 pub const LENGTH_COUNTER_LUT: [u8;256] = [
 	/* 0000 0___ */ 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A,
 	/* 0000 1___ */ 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE,
@@ -227,13 +228,14 @@ impl APU {
 	}
 
 	pub fn set_ch_ctrl(&mut self, v: u8) {
+		//println!("set_ch_ctrl: {:02X}", v);
 		self.square1.borrow_mut().set_ch_ctrl(v&CH_CTRL_SQUARE_1);
 		self.square2.borrow_mut().set_ch_ctrl(v&CH_CTRL_SQUARE_2);
 		self.triangle.borrow_mut().set_ch_ctrl(v);
 		self.noise.borrow_mut().set_ch_ctrl(v);
 	}
 
-	pub fn get_ch_ctrl(&self) -> u8 {
+	pub fn get_ch_ctrl(&mut self) -> u8 {
 		let mut ret:u8 = 0;
 
 		if self.square1.borrow().get_length_counter() != 0 {
@@ -248,9 +250,13 @@ impl APU {
 		if self.noise.borrow().get_length_counter() != 0 {
 			ret |= CH_CTRL_NOISE;
 		}
+		if self.frame.interrupted {
+			ret |= CH_CTRL_INTERRUPT;
+			self.frame.interrupted = false;
+		}
 
 		// TODO: DMC
-
+		//println!("get_ch_ctrl: {:02X}", ret);
 		return ret;
 	}
 

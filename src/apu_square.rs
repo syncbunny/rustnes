@@ -118,6 +118,7 @@ impl APUSquare {
 				}
 	
 				if new_fq < 8 || new_fq > 0x7FF {
+					//println!("sweep stop");
 					self.length_counter = 0;	
 					self.cr2 &= 0x7F; // Sweep enable off
 				} else {
@@ -161,7 +162,7 @@ impl APUSquare {
 		self.clock_div <<= 8;
 		self.clock_div |= self.fq1 as u16;
 		self.length_counter = LENGTH_COUNTER_LUT[v as usize];
-
+//println!("length_counter:{}", self.length_counter);
 		self.envelope.reset();
 		return self.fq2;
 	}

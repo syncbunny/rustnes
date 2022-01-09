@@ -8,8 +8,11 @@ use crate::apu_noise::*;
 use crate::events::*;
 
 const SEQ_MODE_MASK: u8 = 0x80;
+const NO_IRQ_MASK:u8 = 0x40;
 
 pub struct APUFrame {
+	pub interrupted: bool,
+
 	cr: u8,
 	seq: u8,
 	square1: Rc<RefCell<APUSquare>>,
@@ -28,6 +31,8 @@ impl APUFrame {
 			event_queue: Arc<Mutex<EventQueue>>
 		) -> APUFrame {
 		APUFrame {
+			interrupted: false,
+
 			cr: 0,
 			seq: 0,
 			square1: square1,
@@ -86,8 +91,11 @@ impl APUFrame {
 					self.square2.borrow_mut().envelope_clock();
 					self.noise.borrow_mut().envelope_clock();
 
-					let mut queue = self.event_queue.lock().unwrap();
-					queue.push(Event::new(EventType::IRQ));
+					if self.cr & NO_IRQ_MASK == 0 {
+						let mut queue = self.event_queue.lock().unwrap();
+						queue.push(Event::new(EventType::IRQ));
+						self.interrupted = true;
+					}
 				}
 				_ => {}
 			}
