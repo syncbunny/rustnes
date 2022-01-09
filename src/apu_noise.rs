@@ -93,6 +93,10 @@ impl APUNoise {
 		}
     }
 
+	pub fn get_length_counter(&self) -> u8 {
+		return self.length_counter;
+	}
+
 	fn next_seq(&mut self) {
 		let mut exor:bool = false;
 		if (self.fq1 & RAND_MODE) == 0 {

@@ -91,8 +91,10 @@ impl NES {
 		// Mirror
 		let flag6: u8 = cartridge[6];
 		if flag6 & FLAG6_MIRROR == 0 {
+			println!("Mirrir Horizontal");
 			self.ppu.borrow_mut().set_mirror(Mirror::HORIZONTAL);
 		} else {
+			println!("Mirrir Vartical");
 			self.ppu.borrow_mut().set_mirror(Mirror::VARTICAL);
 		}
 

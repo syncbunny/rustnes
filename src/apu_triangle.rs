@@ -100,6 +100,10 @@ impl APUTriangle {
 		}
 	}
 
+	pub fn get_length_counter(&self) -> u8 {
+		return self.length_counter;
+	}
+
 	fn next_seq(&mut self) {
 		let lut:[usize;32] = [
 			0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,

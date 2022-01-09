@@ -172,6 +172,10 @@ impl APUSquare {
 		}
 	}
 
+	pub fn get_length_counter(&self) -> u8 {
+		return self.length_counter;
+	}
+
 	fn next_seq(&mut self) {
 		let seq:&[u8;8];
 		match self.cr1 & DUTY_MASK {

@@ -233,6 +233,27 @@ impl APU {
 		self.noise.borrow_mut().set_ch_ctrl(v);
 	}
 
+	pub fn get_ch_ctrl(&self) -> u8 {
+		let mut ret:u8 = 0;
+
+		if self.square1.borrow().get_length_counter() != 0 {
+			ret |= CH_CTRL_SQUARE_1;
+		}
+		if self.square2.borrow().get_length_counter() != 0 {
+			ret |= CH_CTRL_SQUARE_2;
+		}
+		if self.triangle.borrow().get_length_counter() != 0 {
+			ret |= CH_CTRL_TRIANGLE;
+		}
+		if self.noise.borrow().get_length_counter() != 0 {
+			ret |= CH_CTRL_NOISE;
+		}
+
+		// TODO: DMC
+
+		return ret;
+	}
+
 	pub fn set_tw_cr1(&mut self, v: u8) {
 		self.twc = self.triangle.borrow_mut().set_cr1(v);
 	}

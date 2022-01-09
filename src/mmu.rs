@@ -57,6 +57,9 @@ impl MMU {
 			0x2007 => {
 				ret = self.ppu.borrow_mut().read();
 			}
+			0x4015 => {
+				ret = self.apu.borrow_mut().get_ch_ctrl();
+			}
 			0x4016 => {
 				let mut io = self.io.lock().unwrap();
 				ret = io.pad.in1();
