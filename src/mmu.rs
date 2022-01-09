@@ -48,6 +48,9 @@ impl MMU {
 			0x0000 ..= 0x07FF => {
 				ret = self.wram[addr as usize];
 			}
+			0x0800 ..= 0x0FFF => {
+				ret = self.wram[(addr - 0x0800) as usize];
+			}
 			0x2002 => {
 				ret = self.ppu.borrow_mut().get_sr();
 			}
