@@ -18,9 +18,17 @@ pub struct APUSquare{
 	seq: usize,
 
 	envelope: APUEnvelope,
+
+	sweep_clock: u8,
+	sweep_reset: bool,
 }
 
 const LENGTH_COUNTER_OFF_MASK:u8 = 0x20;
+const SWEEP_ENABLE_FLAG:u8 = 0x80;
+const SWEEP_DIR_MASK:u8 = 0x08;
+const SWEEP_DIR_UP: u8 = 0x00;
+const SWEEP_VAL_MASK:u8 = 0x07;
+const SWEEP_FREQ_MASK:u8 = 0x70;
 const DUTY_MASK:u8 = 0xC0;
 const DUTY_1_8:u8 = 0x00; // 12.5%
 const DUTY_1_4:u8 = 0x40; // 25.0%
@@ -30,6 +38,28 @@ const DUTY_1_8_VAL:[u8;8] = [0, 1, 0, 0, 0, 0, 0, 0];
 const DUTY_1_4_VAL:[u8;8] = [0, 1, 1, 0, 0, 0, 0, 0];
 const DUTY_1_2_VAL:[u8;8] = [0, 1, 1, 1, 1, 0, 0, 0];
 const DUTY_3_4_VAL:[u8;8] = [0, 1, 1, 1, 1, 1, 1, 0];
+
+macro_rules! SWEEP_CLOCK_DIV {
+	($cr: expr) => {
+		($cr & SWEEP_FREQ_MASK) >> 4
+	}
+}
+
+macro_rules! SWEEP_VAL {
+	($cr: expr) => {
+		$cr & SWEEP_VAL_MASK
+	}
+}
+
+macro_rules! SWEEP_ON {
+	($cr: expr, $lc: expr) => {
+		if ($cr & SWEEP_ENABLE_FLAG) != 0 && ($cr & SWEEP_VAL_MASK != 0) && ($lc != 0) {
+			true
+		} else {
+			false
+		}
+	}
+}
 
 impl APUSquare {
 	pub fn new(n:u8) -> APUSquare {
@@ -49,6 +79,9 @@ impl APUSquare {
 			seq: 0,
 
 			envelope: APUEnvelope::new(),
+
+			sweep_clock: 0,
+			sweep_reset: false,
 		}
 	}
 
@@ -69,6 +102,35 @@ impl APUSquare {
 		}
 	}
 
+	pub fn sweep_clock(&mut self) {
+		if self.sweep_reset {
+			self.sweep_clock = SWEEP_CLOCK_DIV!(self.cr2);
+			self.sweep_reset = false;
+		} else {
+			if self.sweep_clock == 0 {
+				let mut new_fq: u16 = self.clock_div;
+				if SWEEP_ON!(self.cr2, self.length_counter) {
+					if self.cr2 & SWEEP_DIR_MASK == SWEEP_DIR_UP {
+						new_fq = self.clock_div + (self.clock_div >> SWEEP_VAL!(self.cr2));
+					} else {
+						new_fq = self.clock_div - (self.clock_div >> SWEEP_VAL!(self.cr2));
+					}
+				}
+	
+				if new_fq < 8 || new_fq > 0x7FF {
+					self.length_counter = 0;	
+					self.cr2 &= 0x7F; // Sweep enable off
+				} else {
+					self.clock_div = new_fq;
+					self.clock = new_fq;
+				}
+				self.sweep_clock = SWEEP_CLOCK_DIV!(self.cr2);
+			} else {
+				self.sweep_clock -= 1;
+			}
+		}
+	}
+
 	pub fn envelope_clock(&mut self) {
 		self.envelope.clock();
 	}
@@ -81,15 +143,12 @@ impl APUSquare {
 
 	pub fn set_cr2(&mut self, v:u8) -> u8 {
 		self.cr2 = v;
+		self.sweep_reset = true;
 		return self.cr2;
 	}
 
 	pub fn set_fq1(&mut self, v:u8) -> u8 {
 		self.fq1 = v;
-/*
-		self.clock_div &= 0xFF00;
-		self.clock_div |= v as u16;
-*/
 		self.clock_div = (self.fq2 as u16) & 0x07;
 		self.clock_div <<= 8;
 		self.clock_div |= self.fq1 as u16;
@@ -98,14 +157,11 @@ impl APUSquare {
 
 	pub fn set_fq2(&mut self, v:u8) -> u8 {
 		self.fq2 = v;
-/*
-		self.clock_div &= 0x00FF;
-		self.clock_div |= ((v&0x07) as u16) << 8; 
-*/
 		self.clock_div = (self.fq2 as u16) & 0x07;
 		self.clock_div <<= 8;
 		self.clock_div |= self.fq1 as u16;
 		self.length_counter = LENGTH_COUNTER_LUT[v as usize];
+
 		self.envelope.reset();
 		return self.fq2;
 	}

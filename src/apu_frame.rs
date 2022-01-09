@@ -49,6 +49,9 @@ impl APUFrame {
 					self.triangle.borrow_mut().length_clock();
 					self.noise.borrow_mut().length_clock();
 
+					self.square1.borrow_mut().sweep_clock();
+					self.square2.borrow_mut().sweep_clock();
+
 					self.triangle.borrow_mut().linear_clock();
 
 					self.square1.borrow_mut().envelope_clock();
@@ -67,6 +70,9 @@ impl APUFrame {
 					self.square2.borrow_mut().length_clock();
 					self.triangle.borrow_mut().length_clock();
 					self.noise.borrow_mut().length_clock();
+
+					self.square1.borrow_mut().sweep_clock();
+					self.square2.borrow_mut().sweep_clock();
 
 					self.triangle.borrow_mut().linear_clock();
 
@@ -91,6 +97,9 @@ impl APUFrame {
 					self.triangle.borrow_mut().length_clock();
 					self.noise.borrow_mut().length_clock();
 
+					self.square1.borrow_mut().sweep_clock();
+					self.square2.borrow_mut().sweep_clock();
+
 					self.triangle.borrow_mut().linear_clock();
 
 					self.square1.borrow_mut().envelope_clock();
@@ -109,6 +118,9 @@ impl APUFrame {
 					self.square2.borrow_mut().length_clock();
 					self.triangle.borrow_mut().length_clock();
 					self.noise.borrow_mut().length_clock();
+
+					self.square1.borrow_mut().sweep_clock();
+					self.square2.borrow_mut().sweep_clock();
 
 					self.triangle.borrow_mut().linear_clock();
 
