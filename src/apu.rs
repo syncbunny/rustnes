@@ -94,8 +94,8 @@ pub struct APU {
 
 impl APU {
 	pub fn new(io:Arc<Mutex<IO>>) -> APU {
-		let square1 = Rc::new(RefCell::new(APUSquare::new()));
-		let square2 = Rc::new(RefCell::new(APUSquare::new()));
+		let square1 = Rc::new(RefCell::new(APUSquare::new(1)));
+		let square2 = Rc::new(RefCell::new(APUSquare::new(2)));
 		let triangle = Rc::new(RefCell::new(APUTriangle::new()));
 		let noise = Rc::new(RefCell::new(APUNoise::new()));
 	

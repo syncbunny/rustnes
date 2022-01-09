@@ -39,6 +39,7 @@ impl APUEnvelope {
 				} else {
 					self.val -= 1;
 				}
+				self.clock = self.cr & CLOCK_DIV_MASK;
 			} else {
 				self.clock -= 1;
 			}

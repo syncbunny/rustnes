@@ -4,6 +4,7 @@ use crate::apu_envelope::*;
 
 pub struct APUSquare{
 	pub val: f32,
+	n: u8,
 	cr1: u8,
 	cr2: u8,
 	fq1: u8,
@@ -31,9 +32,10 @@ const DUTY_1_2_VAL:[u8;8] = [0, 1, 1, 1, 1, 0, 0, 0];
 const DUTY_3_4_VAL:[u8;8] = [0, 1, 1, 1, 1, 1, 1, 0];
 
 impl APUSquare {
-	pub fn new() -> APUSquare {
+	pub fn new(n:u8) -> APUSquare {
 		APUSquare {
 			val: 0.0,
+			n: n,
 			cr1: 0,
 			cr2: 0,
 			fq1: 0,
