@@ -1717,7 +1717,6 @@ impl CPU {
 	fn do_nmi(&mut self) {
 		//println!("do_nmi");
 		UNSET_B!(self.p);
-		SET_I!(self.p);
 
 		// Push SP
 		let mut mmu = self.mmu.borrow_mut();
@@ -1727,6 +1726,9 @@ impl CPU {
 		// Push P
 		mmu.write(0x0100 + (self.sp as u16), self.p);
 		self.sp -= 1;
+
+		// SET I Flag
+		SET_I!(self.p);
 
 		// Set PC to NMI Vector
 		self.pc = mmu.read_2bytes(NMI_VECTOR);
@@ -1737,7 +1739,6 @@ impl CPU {
 
 	fn do_irq(&mut self) {
 		UNSET_B!(self.p);
-		SET_I!(self.p);
 
 		// Push SP
 		let mut mmu = self.mmu.borrow_mut();
@@ -1747,6 +1748,9 @@ impl CPU {
 		// Push P
 		mmu.write(0x0100 + (self.sp as u16), self.p);
 		self.sp -= 1;
+
+		// SET I Flag
+		SET_I!(self.p);
 
 		// Set PC to IRQ Vector
 		self.pc = mmu.read_2bytes(IRQ_VECTOR);
