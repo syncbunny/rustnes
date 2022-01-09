@@ -1,8 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 use crate::apu_square::*;
 use crate::apu_triangle::*;
 use crate::apu_noise::*;
+use crate::events::*;
 
 const SEQ_MODE_MASK: u8 = 0x80;
 
@@ -12,7 +15,8 @@ pub struct APUFrame {
 	square1: Rc<RefCell<APUSquare>>,
 	square2: Rc<RefCell<APUSquare>>,
 	triangle: Rc<RefCell<APUTriangle>>,
-	noise: Rc<RefCell<APUNoise>>
+	noise: Rc<RefCell<APUNoise>>,
+	event_queue: Arc<Mutex<EventQueue>>
 }
 
 impl APUFrame {
@@ -20,7 +24,8 @@ impl APUFrame {
 			square1: Rc<RefCell<APUSquare>>,
 			square2: Rc<RefCell<APUSquare>>,
 			triangle: Rc<RefCell<APUTriangle>>,
-			noise: Rc<RefCell<APUNoise>>
+			noise: Rc<RefCell<APUNoise>>,
+			event_queue: Arc<Mutex<EventQueue>>
 		) -> APUFrame {
 		APUFrame {
 			cr: 0,
@@ -28,7 +33,8 @@ impl APUFrame {
 			square1: square1,
 			square2: square2,
 			triangle: triangle,
-			noise: noise
+			noise: noise,
+			event_queue: event_queue,
 		}
 	}
 
@@ -79,7 +85,9 @@ impl APUFrame {
 					self.square1.borrow_mut().envelope_clock();
 					self.square2.borrow_mut().envelope_clock();
 					self.noise.borrow_mut().envelope_clock();
-					// TODO IRQ
+
+					let mut queue = self.event_queue.lock().unwrap();
+					queue.push(Event::new(EventType::IRQ));
 				}
 				_ => {}
 			}

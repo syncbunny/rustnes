@@ -119,6 +119,10 @@ impl NES {
 							let mut cpu = self.cpu.borrow_mut();
 							cpu.nmi();
 						}
+						EventType::IRQ => {
+							let mut cpu = self.cpu.borrow_mut();
+							cpu.irq();
+						}
 						EventType::DMA => {
 							//println!("DMA!");
 							// Stop CPU 514 cpu-clock

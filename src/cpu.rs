@@ -78,6 +78,7 @@ pub struct CPU {
 	clock_remain: u32,
 	reset_flag: bool,
 	nmi_flag: bool,
+	irq_flag: bool,
 
 	mmu: Rc<RefCell<MMU>>,
 }
@@ -94,6 +95,7 @@ impl CPU {
 			clock_remain: 0,
 			reset_flag: false,
 			nmi_flag: false,
+			irq_flag: false,
 			mmu: mmu 
 		}
 	}
@@ -104,6 +106,9 @@ impl CPU {
 		}
 		if self.nmi_flag {
 			self.do_nmi();
+		}
+		if self.irq_flag {
+			self.do_irq();
 		}
 	
 		if self.clock_remain > 0 {
@@ -791,7 +796,7 @@ impl CPU {
 					mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
 					PUSH!(self.p);
 					SET_I!(self.p);
-					self.pc = mmu.read_2bytes(RESET_VECTOR);
+					self.pc = mmu.read_2bytes(BRK_VECTOR);
 				}
 			}
 		}
@@ -1689,6 +1694,13 @@ impl CPU {
 		self.clock_remain = 0;
 	}
 
+	pub fn irq(&mut self) {
+		if self.p & FLG_I == 0 {
+			self.irq_flag = true;
+			self.clock_remain = 0;
+		}
+	}
+
 	pub fn set_pc(&mut self, pc:u16) {
 		self.pc = pc;
 	}
@@ -1720,6 +1732,26 @@ impl CPU {
 		self.pc = mmu.read_2bytes(NMI_VECTOR);
 
 		self.nmi_flag = false;
+		self.clock_remain = 6;
+	}
+
+	fn do_irq(&mut self) {
+		UNSET_B!(self.p);
+		SET_I!(self.p);
+
+		// Push SP
+		let mut mmu = self.mmu.borrow_mut();
+		mmu.push_2bytes(0x0100 + self.sp as u16, self.pc);
+		self.sp -= 2;
+
+		// Push P
+		mmu.write(0x0100 + (self.sp as u16), self.p);
+		self.sp -= 1;
+
+		// Set PC to IRQ Vector
+		self.pc = mmu.read_2bytes(IRQ_VECTOR);
+
+		self.irq_flag = false;
 		self.clock_remain = 6;
 	}
 

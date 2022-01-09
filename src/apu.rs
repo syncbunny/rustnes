@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 use crate::io::*;
+use crate::events::*;
 use crate::apu_frame::*;
 use crate::apu_square::*;
 use crate::apu_triangle::*;
@@ -93,7 +94,7 @@ pub struct APU {
 }
 
 impl APU {
-	pub fn new(io:Arc<Mutex<IO>>) -> APU {
+	pub fn new(io:Arc<Mutex<IO>>, event_queue: Arc<Mutex<EventQueue>>) -> APU {
 		let square1 = Rc::new(RefCell::new(APUSquare::new(1)));
 		let square2 = Rc::new(RefCell::new(APUSquare::new(2)));
 		let triangle = Rc::new(RefCell::new(APUTriangle::new()));
@@ -128,7 +129,8 @@ impl APU {
 				Rc::clone(&square1),
 				Rc::clone(&square2),
 				Rc::clone(&triangle),
-				Rc::clone(&noise)
+				Rc::clone(&noise),
+				event_queue
 			),
 			square1: square1,
 			square2: square2,

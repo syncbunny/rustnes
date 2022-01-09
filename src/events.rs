@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 pub enum EventType {
-	NMI, DMA
+	NMI, DMA, IRQ
 }
 
 pub struct Event {
@@ -35,4 +35,3 @@ impl Event {
 		}
 	}
 }
-
