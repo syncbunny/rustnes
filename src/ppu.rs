@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::Condvar;
 use std::{thread, time};
+use std::time::{Instant, Duration};
 use crate::io::*;
 use crate::events::*;
 
@@ -134,7 +135,8 @@ pub struct PPU {
 
 	io: Arc<Mutex<IO>>,
 	event_queue: Arc<Mutex<EventQueue>>,
-	vbr: Arc<(Mutex<VBR>, Condvar)>
+	vbr: Arc<(Mutex<VBR>, Condvar)>,
+	last_frame_time: Instant,
 }
 
 impl PPU {
@@ -166,7 +168,8 @@ impl PPU {
 
 			io: io,
 			event_queue: event_queue,
-			vbr: vbr
+			vbr: vbr,
+			last_frame_time: Instant::now()
 		};
 		ppu.generate_lut();
 
@@ -371,6 +374,15 @@ impl PPU {
 		let (vbr, cond) = &*self.vbr;
 		let mut vbr = vbr.lock().unwrap();
 		(*vbr).in_vbr = false;
+
+		let d_1_60 = Duration::from_micros(1_000_000/60);
+		let t = Instant::now();
+		let d = t.duration_since(self.last_frame_time);
+		let dd = d_1_60.saturating_sub(d);
+		if dd != Duration::ZERO {
+			::std::thread::sleep(dd);
+		}	
+		self.last_frame_time = t;
 	}
 
 	fn render_bg(&mut self, x: u32, y: u32) {
