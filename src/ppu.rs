@@ -137,6 +137,7 @@ pub struct PPU {
 	event_queue: Arc<Mutex<EventQueue>>,
 	vbr: Arc<(Mutex<VBR>, Condvar)>,
 	last_frame_time: Instant,
+	nowait: bool,
 }
 
 impl PPU {
@@ -169,7 +170,8 @@ impl PPU {
 			io: io,
 			event_queue: event_queue,
 			vbr: vbr,
-			last_frame_time: Instant::now()
+			last_frame_time: Instant::now(),
+			nowait: false,
 		};
 		ppu.generate_lut();
 
@@ -179,6 +181,10 @@ impl PPU {
 	pub fn reset(&mut self) {	
 		self.line = 0;
 		self.line_clock = 0;
+	}
+
+	pub fn nowait(&mut self, b:bool) {
+		self.nowait = b;
 	}
 
 	pub fn clock(&mut self) {
@@ -375,13 +381,16 @@ impl PPU {
 		let mut vbr = vbr.lock().unwrap();
 		(*vbr).in_vbr = false;
 
-		let d_1_60 = Duration::from_micros(1_000_000/60);
 		let t = Instant::now();
-		let d = t.duration_since(self.last_frame_time);
-		let dd = d_1_60.saturating_sub(d);
-		if dd != Duration::ZERO {
-			::std::thread::sleep(dd);
-		}	
+		if !self.nowait {
+			println!("wait");
+			let d_1_60 = Duration::from_micros(1_000_000/60);
+			let d = t.duration_since(self.last_frame_time);
+			let dd = d_1_60.saturating_sub(d);
+			if dd != Duration::ZERO {
+				::std::thread::sleep(dd);
+			}
+		}
 		self.last_frame_time = t;
 	}
 

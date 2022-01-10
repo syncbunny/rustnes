@@ -41,6 +41,7 @@ struct Configure {
 	use_entry: bool,
 	entry: u16,
 	nestest: bool,
+	nowait: bool,
 }
 
 fn main() {
@@ -49,6 +50,7 @@ fn main() {
 		use_entry: false,
 		entry: 0,
 		nestest: false,
+		nowait: false,
 	};
 	analyze_arg(&mut config);
 	if config.cartridge.is_empty() {
@@ -74,6 +76,10 @@ fn main() {
 			cpu.borrow_mut().set_pc(config.entry);
 		} else {
 			nes.reset();
+		}
+
+		if config.nowait {
+			nes.nowait(true);
 		}
 
 		if config.nestest {
@@ -114,6 +120,9 @@ fn analyze_arg(config:&mut Configure) {
 				config.entry = 0xC000;
 				config.nestest = true;
 				option = Option::NONE;
+			}
+			"--nowait" => {
+				config.nowait = true;
 			}
 			_ => {
 				match option {

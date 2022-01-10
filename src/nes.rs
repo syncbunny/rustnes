@@ -104,6 +104,11 @@ impl NES {
 		self.mmu.borrow_mut().set_mapper(mapper);
 	}
 
+	pub fn nowait(&mut self, b:bool) {
+		let mut ppu = self.ppu.borrow_mut();
+		ppu.nowait(b);
+	}
+
 	pub fn clock(&mut self) {
 		//       Master          CPU      PPU    APU
 		// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/12
