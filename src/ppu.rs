@@ -383,7 +383,6 @@ impl PPU {
 
 		let t = Instant::now();
 		if !self.nowait {
-			println!("wait");
 			let d_1_60 = Duration::from_micros(1_000_000/60);
 			let d = t.duration_since(self.last_frame_time);
 			let dd = d_1_60.saturating_sub(d);
