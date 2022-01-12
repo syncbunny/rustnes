@@ -9,6 +9,7 @@ use std::rc::Rc;
 use std::ptr;
 use std::string::String;
 use std::ffi::CString;
+use std::ffi::CStr;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::Condvar;
@@ -47,6 +48,19 @@ impl AudioCallback for AudioRenderer {
 	fn callback(&mut self, out: &mut[f32]) {
 		let mut io = self.io.lock().unwrap();
 		io.read_audio(out);
+	}
+}
+
+struct GLVersion {
+	majaor: u8,
+	minor: u8,
+}
+
+impl GLVersion {
+	pub fn new(s:&str) -> GLVersion {
+		GLVersion {
+			majaor: 0, minor: 0
+		}
 	}
 }
 
@@ -310,6 +324,12 @@ impl Renderer {
 		}
 
 		unsafe {
+			let v = gl::GetString(gl::SHADING_LANGUAGE_VERSION);
+			let cstr = CStr::from_ptr(v as *const i8);
+			println!("SHADING_LANGUAGE_VERSION:{}", cstr.to_str().unwrap());
+		}
+
+		unsafe {
 			println!("compile vertex shader");
 			let vobj = gl::CreateShader(gl::VERTEX_SHADER);
 			gl::ShaderSource(vobj, 1, &mut vs_src.as_ptr(), ptr::null());
@@ -358,7 +378,7 @@ impl Renderer {
 		}
 		if buf_size > 1 {
 			let mut length = 0_i32;
-			let mut log:Vec<u8> = Vec::with_capacity(buf_size as usize);
+			let mut log:Vec<u8> = vec![0;buf_size as usize];
 			unsafe {
 				gl::GetShaderInfoLog(shader, buf_size, &mut length, log.as_mut_ptr() as *mut i8);
 			}
