@@ -76,7 +76,7 @@ impl Renderer {
 
 		let gl_attr = video_subsystem.gl_attr();
 		gl_attr.set_context_profile(GLProfile::Core);
-		gl_attr.set_context_version(3, 3);
+		gl_attr.set_context_version(2, 1);
 
 		let window = video_subsystem.window("Window", 256, 240)
 			.opengl()
@@ -87,7 +87,7 @@ impl Renderer {
 		gl::load_with(|name| video_subsystem.gl_get_proc_address(name) as *const _);
 
 		debug_assert_eq!(gl_attr.context_profile(), GLProfile::Core);
-		debug_assert_eq!(gl_attr.context_version(), (3, 3));
+		debug_assert_eq!(gl_attr.context_version(), (2, 1));
 
 		let d_spec = AudioSpecDesired {
 			freq: Some(44100),
@@ -267,10 +267,11 @@ impl Renderer {
 
 			// create object
 			let position_data:Vec<f32> = vec![
-				-1.0,  1.0, 0.0,
-				-1.0, -1.0, 0.0,
-				 1.0,  1.0, 0.0,
-				 1.0, -1.0, 0.0,
+            //  x     y     z    u    v
+				-1.0,  1.0, 0.0, 0.0, 0.0,
+				-1.0, -1.0, 0.0, 0.0, 1.0,
+				 1.0,  1.0, 0.0, 1.0, 0.0,
+				 1.0, -1.0, 0.0, 1.0, 1.0,
 			];
 			gl::GenVertexArrays(1, &mut self.vao);
 			self.check_gl_error(line!());
@@ -281,12 +282,16 @@ impl Renderer {
 			self.check_gl_error(line!());
 			gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
 			self.check_gl_error(line!());
-			gl::BufferData(gl::ARRAY_BUFFER, (mem::size_of::<f32>()*12) as isize, position_data.as_ptr() as *const c_void, gl::STATIC_DRAW);
+			gl::BufferData(gl::ARRAY_BUFFER, (mem::size_of::<f32>()*20) as isize, position_data.as_ptr() as *const c_void, gl::STATIC_DRAW);
 			self.check_gl_error(line!());
 
 			gl::EnableVertexAttribArray(0);
 			self.check_gl_error(line!());
-			gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 0, 0 as *const c_void);
+			gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 4*5, 0 as *const c_void);
+			self.check_gl_error(line!());
+			gl::EnableVertexAttribArray(1);
+			self.check_gl_error(line!());
+			gl::VertexAttribPointer(1, 2, gl::FLOAT, gl::FALSE, 4*5, 12 as *const c_void);
 			self.check_gl_error(line!());
 
 			gl::BindVertexArray(0);
@@ -299,24 +304,24 @@ impl Renderer {
 
 	fn create_program(&mut self) {
 		let vs_src:CString = CString::new("
-			#version 150 core
-			in vec4 position;
-			out vec2 texcoord;
+			#version 120
+
+            attribute vec2 tex_uv;
+            varying vec2 tex_coord;
 
 			void main() {
-				gl_Position = position;
-				texcoord = vec2(gl_VertexID/2, gl_VertexID%2);
+				gl_Position = gl_Vertex;
+                tex_coord = tex_uv;
 			}
 		").unwrap();
 		let fs_src:CString = CString::new("
-			#version 150 core
-			
-			uniform sampler2D image;
-			in vec2 texcoord;
-			out vec4 fragment;
+			#version 120
 
+            uniform sampler2D image;
+            varying vec2 tex_coord;
+			
 			void main() {
-				fragment = texture(image, texcoord);
+                gl_FragColor = texture2D(image, tex_coord);
 			}
 		").unwrap();
 		unsafe {
@@ -361,6 +366,8 @@ impl Renderer {
 	
 		unsafe {
 			gl::BindAttribLocation(self.shader_program, 0, CString::new("position").unwrap().as_ptr());
+			self.check_gl_error(line!());
+            gl::BindAttribLocation(self.shader_program, 1, CString::new("tex_uv").unwrap().as_ptr());
 			self.check_gl_error(line!());
 			gl::BindFragDataLocation(self.shader_program, 0, CString::new("fragment").unwrap().as_ptr());
 			self.check_gl_error(line!());
