@@ -1,6 +1,7 @@
 extern crate sdl2;
 extern crate gl;
 
+use std::cmp::Ordering;
 use std::mem;
 use std::cell::RefCell;
 use std::thread;
@@ -51,6 +52,7 @@ impl AudioCallback for AudioRenderer {
 	}
 }
 
+#[derive(Eq)]
 struct GLVersion {
 	majaor: u8,
 	minor: u8,
@@ -58,9 +60,45 @@ struct GLVersion {
 
 impl GLVersion {
 	pub fn new(s:&str) -> GLVersion {
+		let v:Vec<&str> = s.split(".").collect();
 		GLVersion {
-			majaor: 0, minor: 0
+			majaor: v[0].parse().unwrap(),
+			minor: v[1].parse().unwrap(), 
 		}
+	}
+}
+
+impl PartialOrd for GLVersion {
+	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+		Some(self.cmp(other))
+	}
+}
+
+impl Ord for GLVersion {
+	fn cmp(&self, other: &Self) -> Ordering {
+		if self.majaor > other.majaor {
+			Ordering::Greater
+		}
+		else if self.majaor < other.majaor {
+			Ordering::Less
+		}
+		else {
+			if self.minor > other.minor {
+				Ordering::Greater
+			}
+			else if self.minor < other.minor {
+				Ordering::Less
+			}
+			else {
+				Ordering::Equal
+			}
+		}
+	}
+}
+
+impl PartialEq for GLVersion {
+	fn eq(&self, other: &Self) -> bool {
+		self.majaor == other.majaor && self.minor == other.minor
 	}
 }
 
@@ -78,7 +116,7 @@ impl Renderer {
 		gl_attr.set_context_profile(GLProfile::Core);
 		gl_attr.set_context_version(2, 1);
 
-		let window = video_subsystem.window("Window", 256, 240)
+		let window = video_subsystem.window("NES", 256, 240)
 			.opengl()
 			.build()
 			.unwrap();
@@ -303,7 +341,7 @@ impl Renderer {
 	}
 
 	fn create_program(&mut self) {
-		let vs_src:CString = CString::new("
+		let vs_src_120:CString = CString::new("
 			#version 120
 
             attribute vec2 tex_uv;
@@ -314,7 +352,7 @@ impl Renderer {
                 tex_coord = tex_uv;
 			}
 		").unwrap();
-		let fs_src:CString = CString::new("
+		let fs_src_120:CString = CString::new("
 			#version 120
 
             uniform sampler2D image;
@@ -324,14 +362,48 @@ impl Renderer {
                 gl_FragColor = texture2D(image, tex_coord);
 			}
 		").unwrap();
+		let vs_src_150:CString = CString::new("
+			#version 150 core
+			in vec4 position;
+			out vec2 texcoord;
+ 
+			void main() {
+				gl_Position = position;
+				texcoord = vec2(gl_VertexID/2, gl_VertexID%2);
+			}
+		").unwrap();
+		let fs_src_150:CString = CString::new("
+			#version 150 core
+                       
+			uniform sampler2D image;
+			in vec2 texcoord;
+			out vec4 fragment;
+ 
+			void main() {
+				fragment = texture(image, texcoord);
+			}
+		").unwrap();
+		let vs_src:&CString;
+		let fs_src:&CString;
+
 		unsafe {
 			self.shader_program = gl::CreateProgram();
 		}
 
+		let mut glsl_version:GLVersion;
 		unsafe {
 			let v = gl::GetString(gl::SHADING_LANGUAGE_VERSION);
 			let cstr = CStr::from_ptr(v as *const i8);
 			println!("SHADING_LANGUAGE_VERSION:{}", cstr.to_str().unwrap());
+			glsl_version = GLVersion::new(cstr.to_str().unwrap());
+			let version_120 = GLVersion::new("1.20");
+			if glsl_version > version_120 {
+				vs_src = &vs_src_150;
+				fs_src = &fs_src_150;
+			} else {
+				vs_src = &vs_src_120;
+				fs_src = &fs_src_120;
+			}
 		}
 
 		unsafe {
