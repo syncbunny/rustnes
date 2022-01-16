@@ -1,4 +1,4 @@
-# cppnes
+# rustnes
 A NES Enulator written in Rust
 
 ## NOT Supported features
