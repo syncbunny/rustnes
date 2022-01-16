@@ -14,7 +14,7 @@ use crate::apu::*;
 use crate::events::*;
 
 // NES Const
-const FLAG6_V_MIRROR: u8           = 0x01;
+const FLAG6_MIRROR: u8             = 0x01;
 const FLAG6_HAS_BATTARY_BACKUP: u8 = 0x02;
 const FLAG6_HAS_TRAINER: u8        = 0x04;
 const FLAG6_HAS_OWN_MIRROR: u8     = 0x80;
@@ -27,7 +27,7 @@ const FLAG7_MAPPER_HIGH: u8        = 0xF0;
 
 const CLOCK_DIV_CPU: i32 = 12;
 const CLOCK_DIV_PPU: i32 = 4;
-
+const CLOCK_DIV_APU: i32 = 12;
 
 pub struct NES {
 	cpu: Rc<RefCell<CPU>>,
@@ -37,6 +37,7 @@ pub struct NES {
 
 	clock_cpu: i32,
 	clock_ppu: i32,
+	clock_apu: i32,
 
 	event_queue: Arc<Mutex<EventQueue>>,
 }
@@ -50,6 +51,7 @@ impl NES {
 			apu: apu,
 			clock_cpu: 0,
 			clock_ppu: 0,
+			clock_apu: 0,
 			event_queue: event_queue,
 		}
 	}
@@ -86,34 +88,100 @@ impl NES {
 		end = start + crom_size *  8 * 1024;
 		self.mmu.borrow_mut().set_CROM(&cartridge[start .. end]);
 
+		// Mirror
+		let flag6: u8 = cartridge[6];
+		if flag6 & FLAG6_MIRROR == 0 {
+			println!("Mirrir Horizontal");
+			self.ppu.borrow_mut().set_mirror(Mirror::HORIZONTAL);
+		} else {
+			println!("Mirrir Vartical");
+			self.ppu.borrow_mut().set_mirror(Mirror::VARTICAL);
+		}
+
 		// Mapper
 		let mapper: u8;
 		mapper = (cartridge[7] & FLAG7_MAPPER_HIGH) | ((cartridge[6] & FLAG6_MAPPAER_LOW) >> 4);
 		self.mmu.borrow_mut().set_mapper(mapper);
 	}
 
+	pub fn nowait(&mut self, b:bool) {
+		let mut ppu = self.ppu.borrow_mut();
+		ppu.nowait(b);
+	}
+
 	pub fn clock(&mut self) {
 		//       Master          CPU      PPU    APU
-    	// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/(12*7457)
+		// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/12
 
 		{
+			let mut queue = self.event_queue.lock().unwrap();
+			let evt_w = queue.pop();
+			match evt_w {
+				None => {}
+				_ => {
+					let evt = evt_w.unwrap();
+					match (evt.event_type) {
+						EventType::NMI => {
+							//println!("NMI!");
+							let mut cpu = self.cpu.borrow_mut();
+							cpu.nmi();
+						}
+						EventType::IRQ => {
+							let mut cpu = self.cpu.borrow_mut();
+							cpu.irq();
+						}
+						EventType::DMA => {
+							//println!("DMA!");
+							// Stop CPU 514 cpu-clock
+							self.clock_cpu = 514*CLOCK_DIV_CPU;
+							//println!("clock_cpu={}", self.clock_cpu);
+						}
+					}
+				}
+			}
+		}
+		{
 			let mut ppu = self.ppu.borrow_mut();
-			if self.clock_ppu == (CLOCK_DIV_PPU -1) {
+			if self.clock_ppu <= 0 {
 				ppu.clock();
-				self.clock_ppu = 0;
+				self.clock_ppu = CLOCK_DIV_PPU -1;
 			} else {
-				self.clock_ppu += 1;
+				self.clock_ppu -= 1;
 			}
 		}
 
 		{
 			let mut cpu = self.cpu.borrow_mut();
-			if self.clock_cpu == (CLOCK_DIV_CPU -1) {
+			if self.clock_cpu <= 0 {
 				cpu.clock();
-				self.clock_cpu = 0;
+				self.clock_cpu = CLOCK_DIV_CPU -1;
 			} else {
-				self.clock_cpu += 1;
+				self.clock_cpu -= 1;
 			}
+		}
+
+		{
+			let mut apu = self.apu.borrow_mut();
+			if self.clock_apu <= 0 {
+				apu.clock();
+				self.clock_apu = CLOCK_DIV_APU -1;
+			} else {
+				self.clock_apu -= 1;
+			}
+		}
+	}
+
+	pub fn clock_nestest(&mut self) {
+		if self.clock_cpu <= 0 {
+			self.clock();
+			let mmu = self.mmu.borrow_mut();
+			let m2 = mmu.peek_02();
+			let m3 = mmu.peek_03();
+			if m2 != 0 || m3 != 0 {
+				println!("nestest: {:02X}, {:02X}", m2, m3);
+			}
+		} else {
+			self.clock();
 		}
 	}
 
