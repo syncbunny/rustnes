@@ -4,7 +4,7 @@ A NES Enulator written in Rust
 ## NOT Supported features
 + Second controller (and mic-in)
 + DMC Sound
-+ PAL Mode (Only NTSC MOde is supported).
++ PAL Mode (Only NTSC Mode is supported).
 
 ## Supported mappers
 None(only mapper-zero is supported).
@@ -20,7 +20,7 @@ None(only mapper-zero is supported).
 cargo b --release
 
 ## Usage
-rustnes <ROMFile>
+rustnes &lt;ROMFile&gt;
   
 ## Controll (Pad-1)
 + UP/Down/Left/Right: Cursor keys
