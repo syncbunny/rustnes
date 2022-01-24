@@ -227,6 +227,12 @@ impl MMU {
 			0x4011 => {
 				self.apu.borrow_mut().set_dmc2(n);
 			}
+			0x4012 => {
+				self.apu.borrow_mut().set_dmc3(n);
+			}
+			0x4013 => {
+				self.apu.borrow_mut().set_dmc4(n);
+			}
 			0x4014 => {
 				self.start_dma(n);
 			}

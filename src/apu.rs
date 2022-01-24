@@ -227,6 +227,14 @@ impl APU {
 		// TODO
 	}
 
+	pub fn set_dmc3(&mut self, v: u8) {
+		// TODO
+	}
+
+	pub fn set_dmc4(&mut self, v: u8) {
+		// TODO
+	}
+
 	pub fn set_ch_ctrl(&mut self, v: u8) {
 		//println!("set_ch_ctrl: {:02X}", v);
 		self.square1.borrow_mut().set_ch_ctrl(v&CH_CTRL_SQUARE_1);
