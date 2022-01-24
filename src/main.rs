@@ -42,6 +42,7 @@ struct Configure {
 	entry: u16,
 	nestest: bool,
 	nowait: bool,
+	profile: bool,
 }
 
 fn main() {
@@ -51,6 +52,7 @@ fn main() {
 		entry: 0,
 		nestest: false,
 		nowait: false,
+		profile: false,
 	};
 	analyze_arg(&mut config);
 	if config.cartridge.is_empty() {
@@ -80,6 +82,9 @@ fn main() {
 
 		if config.nowait {
 			nes.nowait(true);
+		}
+		if config.profile {
+			nes.profile(true);
 		}
 
 		if config.nestest {
@@ -123,6 +128,9 @@ fn analyze_arg(config:&mut Configure) {
 			}
 			"--nowait" => {
 				config.nowait = true;
+			}
+			"--profile" => {
+				config.profile = true;
 			}
 			_ => {
 				match option {

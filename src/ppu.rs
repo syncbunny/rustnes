@@ -138,6 +138,8 @@ pub struct PPU {
 	vbr: Arc<(Mutex<VBR>, Condvar)>,
 	last_frame_time: Instant,
 	nowait: bool,
+
+	pub frames: u32,
 }
 
 impl PPU {
@@ -172,6 +174,8 @@ impl PPU {
 			vbr: vbr,
 			last_frame_time: Instant::now(),
 			nowait: false,
+
+			frames: 0,
 		};
 		ppu.generate_lut();
 
@@ -391,6 +395,8 @@ impl PPU {
 			}
 		}
 		self.last_frame_time = t;
+
+		self.frames += 1;
 	}
 
 	fn render_bg(&mut self, x: u32, y: u32) {

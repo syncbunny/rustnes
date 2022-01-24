@@ -5,6 +5,8 @@ use std::rc::Rc;
 use std::fs::File;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Instant;
+use std::time::Duration;
 use memmap::Mmap;
 
 use crate::cpu::*;
@@ -40,6 +42,14 @@ pub struct NES {
 	clock_apu: i32,
 
 	event_queue: Arc<Mutex<EventQueue>>,
+
+	profile: bool,
+
+	// profiling
+	prof_cpu: Duration,
+	prof_ppu: Duration,
+	prof_apu: Duration,
+	last_frames: u32,
 }
 
 impl NES {
@@ -53,6 +63,11 @@ impl NES {
 			clock_ppu: 0,
 			clock_apu: 0,
 			event_queue: event_queue,
+			profile: false,
+			prof_cpu: Duration::new(0, 0),
+			prof_ppu: Duration::new(0, 0),
+			prof_apu: Duration::new(0, 0),
+			last_frames: 0,
 		}
 	}
 
@@ -109,6 +124,10 @@ impl NES {
 		ppu.nowait(b);
 	}
 
+	pub fn profile(&mut self, b:bool) {
+		self.profile = true;
+	}
+
 	pub fn clock(&mut self) {
 		//       Master          CPU      PPU    APU
 		// NTSC: 21477272.72 Hz  Base/12  Base/4 Base/12
@@ -142,32 +161,93 @@ impl NES {
 		}
 		{
 			let mut ppu = self.ppu.borrow_mut();
-			if self.clock_ppu <= 0 {
-				ppu.clock();
-				self.clock_ppu = CLOCK_DIV_PPU -1;
+			if self.profile {
+				if self.clock_ppu <= 0 {
+					let t1:Instant;
+					let t2:Instant;
+					t1 = Instant::now();
+
+					ppu.clock();
+					self.clock_ppu = CLOCK_DIV_PPU -1;
+				
+					t2 = Instant::now();
+					let d = t2.duration_since(t1);
+					self.prof_ppu = self.prof_ppu.saturating_add(d);
+				} else {
+					self.clock_ppu -= 1;
+				}
 			} else {
-				self.clock_ppu -= 1;
+				if self.clock_ppu <= 0 {
+					ppu.clock();
+					self.clock_ppu = CLOCK_DIV_PPU -1;
+				} else {
+					self.clock_ppu -= 1;
+				}
 			}
 		}
 
 		{
 			let mut cpu = self.cpu.borrow_mut();
-			if self.clock_cpu <= 0 {
-				cpu.clock();
-				self.clock_cpu = CLOCK_DIV_CPU -1;
+			if self.profile {
+				if self.clock_cpu <= 0 {
+					let t1:Instant;
+					let t2:Instant;
+					t1 = Instant::now();
+
+					cpu.clock();
+					self.clock_cpu = CLOCK_DIV_CPU -1;
+
+					t2 = Instant::now();
+					let d = t2.duration_since(t1);
+					self.prof_cpu = self.prof_cpu.saturating_add(d);
+				} else {
+					self.clock_cpu -= 1;
+				}
 			} else {
-				self.clock_cpu -= 1;
+				if self.clock_cpu <= 0 {
+					cpu.clock();
+					self.clock_cpu = CLOCK_DIV_CPU -1;
+				} else {
+					self.clock_cpu -= 1;
+				}
 			}
 		}
 
 		{
 			let mut apu = self.apu.borrow_mut();
-			if self.clock_apu <= 0 {
-				apu.clock();
-				self.clock_apu = CLOCK_DIV_APU -1;
+			if self.profile {
+				if self.clock_apu <= 0 {
+					let t1:Instant;
+					let t2:Instant;
+					t1 = Instant::now();
+
+					apu.clock();
+					self.clock_apu = CLOCK_DIV_APU -1;
+
+					t2 = Instant::now();
+					let d = t2.duration_since(t1);
+					self.prof_apu = self.prof_apu.saturating_add(d);
+				} else {
+					self.clock_apu -= 1;
+				}
 			} else {
-				self.clock_apu -= 1;
+				if self.clock_apu <= 0 {
+					apu.clock();
+					self.clock_apu = CLOCK_DIV_APU -1;
+				} else {
+					self.clock_apu -= 1;
+				}
 			}
+		}
+
+		if self.ppu.borrow().frames >= self.last_frames + 60 {
+			if self.profile {
+				println!("prof: {}, {}, {}", self.prof_cpu.as_millis(), self.prof_ppu.as_millis(), self.prof_apu.as_millis());
+				self.prof_cpu = Duration::from_secs(0);
+				self.prof_ppu = Duration::from_secs(0);
+				self.prof_apu = Duration::from_secs(0);
+			}
+			self.last_frames = self.ppu.borrow().frames;
 		}
 	}
 
