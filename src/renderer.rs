@@ -41,6 +41,9 @@ pub struct Renderer {
 	window: Window,
 	audio_device: AudioDevice<AudioRenderer>,
 	gl_context: GLContext,
+
+	window_width: u32,
+	window_height: u32,
 }
 
 impl AudioCallback for AudioRenderer {
@@ -118,6 +121,7 @@ impl Renderer {
 
 		let window = video_subsystem.window("NES", 256, 240)
 			.opengl()
+			.resizable()
 			.build()
 			.unwrap();
 
@@ -150,7 +154,10 @@ impl Renderer {
 			sdl_context: sdl_context,
 			gl_context: ctx,
 			window: window,
-			audio_device: audio_device
+			audio_device: audio_device,
+
+			window_width: 0,
+			window_height: 0
 		};
 
 		ret.init_gl();
@@ -166,7 +173,7 @@ impl Renderer {
 
 			self.check_gl_error(line!());
 			unsafe {
-				gl::ClearColor(0.6, 0.0, 0.8, 1.0);
+				gl::ClearColor(0.0, 0.0, 0.8, 1.0);
 				self.check_gl_error(line!());
 				gl::Clear(gl::COLOR_BUFFER_BIT);
 				self.check_gl_error(line!());
@@ -277,12 +284,27 @@ impl Renderer {
 						self.io.lock().unwrap().pad.set_right(0, 0);
 					}
 
+					Event::Window { win_event: Resized, .. } => {
+						self.window_resized();
+					}
 					_ => {}
 				}
-        		}
+			}
 			//println!("render_loop:");
-        		//::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
-    		}
+			//::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
+		}
+	}
+
+	fn window_resized(&mut self) {
+		let (w, h) = self.window.size();
+		if w != self.window_width && h != self.window_height {
+			self.window_width = w;
+			self.window_height = h;
+			unsafe {
+				gl::Viewport(0, 0, w as i32, h as i32);
+				self.check_gl_error(line!());
+			}
+		}
 	}
 
 	fn init_gl(&mut self) {
