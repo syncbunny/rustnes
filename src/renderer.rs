@@ -285,19 +285,6 @@ impl Renderer {
                     }
 
                     Event::KeyDown {
-                        keycode: Some(Keycode::Up),
-                        ..
-                    } => {
-                        self.io.lock().unwrap().pad.set_up(0, 1);
-                    }
-                    Event::KeyUp {
-                        keycode: Some(Keycode::Up),
-                        ..
-                    } => {
-                        self.io.lock().unwrap().pad.set_up(0, 0);
-                    }
-
-                    Event::KeyDown {
                         keycode: Some(Keycode::Down),
                         ..
                     } => {
