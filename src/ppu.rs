@@ -386,9 +386,11 @@ impl PPU {
     }
 
     fn frame_end(&mut self) {
-        let (vbr, cond) = &*self.vbr;
-        let mut vbr = vbr.lock().unwrap();
-        cond.wait(vbr).unwrap();
+        if (!self.nowait) {
+            let (vbr, cond) = &*self.vbr;
+            let mut vbr = vbr.lock().unwrap();
+            cond.wait(vbr).unwrap();
+        }
 
         let t = Instant::now();
         self.last_frame_time = t;
