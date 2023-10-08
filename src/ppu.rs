@@ -115,6 +115,8 @@ pub struct PPU {
     sr: u8,  // Status Register
     scroll_y: u8,
     scroll_x: u8,
+    t_scroll_y: u8,
+    t_scroll_x: u8,
 
     line: u32,
     line_clock: u32,
@@ -129,6 +131,11 @@ pub struct PPU {
     sprite_id_buffer: Vec<u8>,
     sprite_buffer_len: usize,
     mirror: Mirror,
+	
+	v: u16,
+	t: u16,
+	x: u8,
+	w: u8, // 0 or 1
 
     pattern_lut: Vec<u8>,
     attr_addr_lut: Vec<usize>,
@@ -155,6 +162,8 @@ impl PPU {
             sr: 0,
             scroll_x: 0,
             scroll_y: 0,
+            t_scroll_x: 0,
+            t_scroll_y: 0,
 
             line: 0,
             line_clock: 0,
@@ -169,6 +178,11 @@ impl PPU {
             sprite_id_buffer: vec![0; 256],
             sprite_buffer_len: 0,
             mirror: Mirror::VARTICAL,
+
+			v: 0,
+			t: 0,
+			x: 0,
+			w: 0,
 
             pattern_lut: vec![0; 256 * 256 * 8], // Hi * Lo * x
             attr_addr_lut: vec![0; 32 * 32],
@@ -215,6 +229,11 @@ impl PPU {
         if self.line == 260 && self.line_clock == 1 {
             CLEAR_SPRITE_HIT!(self.sr);
         }
+		if self.line_clock == 257 {
+			self.v &= 0xFBE0;
+			self.v |= self.t & 0x041F;
+			self.scroll_x = self.t_scroll_x;
+		}
         if self.line_clock >= CLOCKS_PAR_LINE {
             //println!("PPU: line {}", self.line);
             self.line_end(self.line);
@@ -224,6 +243,9 @@ impl PPU {
                 self.start_VR();
             }
             if self.line >= SCAN_LINES {
+				self.v &= 0x841F;
+				self.v |= (self.t & 0x7BE0);
+				self.scroll_y = self.t_scroll_y;
                 CLEAR_VBLANK!(self.sr);
                 self.line = 0;
                 self.frame_end();
@@ -239,6 +261,12 @@ impl PPU {
     pub fn set_cr1(&mut self, n: u8) {
         //println!("PPU: set_cr1: {:02X}", n);
         self.cr1 = n;
+
+		// $2000 Write
+		// t: ...GH.. ........ <- d: ......GH
+		// <used elsewhere> <- d: ABCDEF..
+		self.t &= 0xF3FF;
+		self.t |= ((n as u16)&0x03) << 10;
     }
 
     // Mapping to 0x2001
@@ -266,18 +294,38 @@ impl PPU {
         CLEAR_VBLANK!(self.sr);
 
         //println!("PPU: get_sr: {:02X}", sr);
+		self.w = 0;
         return sr;
     }
 
     pub fn set_scroll(&mut self, v: u8) {
         //println!("PPU: set_scroll: {:02X}", v);
         if self.write_mode == 0 {
-            self.scroll_x = v;
+            self.t_scroll_x = v;
             self.write_mode = 1;
         } else {
-            self.scroll_y = v;
+            self.t_scroll_y = v;
             self.write_mode = 0;
         }
+
+		if self.w == 0 {
+			// $2005 first write (w is 0)
+			// t: ....... ...ABCDE <- d: ABCDE...
+			// x:              FGH <- d: .....FGH
+			// w:                  <- 1
+			self.t &= 0xFFE0;
+			self.t |= (v as u16) >> 3;
+			self.x = v&0x07;
+			self.w = 1;
+		} else {
+			// $2005 second write (w is 1)
+			// t: FGH..AB CDE..... <- d: ABCDEFGH
+			// w:                  <- 0
+			self.t &= 0xFC1F;
+			self.t |= ((v as u16) & 0x07) << 12;
+			self.t |= ((v as u16) >> 3) << 5;
+			self.w = 0
+		}
     }
 
     pub fn set_write_addr(&mut self, v: u8) {
@@ -289,9 +337,32 @@ impl PPU {
         } else {
             self.write_addr &= 0xFF00;
             self.write_addr |= (v as u16);
+			self.scroll_x = self.t_scroll_x;
+			self.scroll_y = self.t_scroll_y;
 
             self.write_mode = 0;
         }
+
+		if self.w == 0 {
+			// $2006 first write (w is 0)
+			// t: .CDEFGH ........ <- d: ..CDEFGH
+			//        <unused>     <- d: AB......
+			// t: Z...... ........ <- 0 (bit Z is cleared)
+			// w:                  <- 1
+			self.t &= 0xC0FF;
+			self.t |= ((v as u16) & 0x3F) << 8;
+			self.t &= 0x03FF;
+			self.w = 1;
+		} else {
+			// $2006 second write (w is 1)
+			// t: ....... ABCDEFGH <- d: ABCDEFGH
+			// v: <...all bits...> <- t: <...all bits...>
+			// w:                  <- 0
+			self.t &= 0xFF00;
+			self.t |= (v as u16);
+			self.v = self.t;
+			self.w = 0;
+		}
     }
 
     // Mapping to 0x2007
@@ -405,8 +476,11 @@ impl PPU {
 
         // calc nametable id
         let nametable_id = get_nametable!(self.cr1);
-        let mut scroll_x: u16 = self.scroll_x as u16;
-        let mut scroll_y: u16 = self.scroll_y as u16;
+        let mut scroll_x: u32 = self.scroll_x as u32;
+        let mut scroll_y: u32 = self.scroll_y as u32;
+		scroll_x = (self.v & 0x1F) as u32;
+		scroll_x <<= 3;
+		scroll_x += self.x as u32;
         if nametable_id == 1 || nametable_id == 3 {
             scroll_x += 256;
         }
@@ -414,8 +488,8 @@ impl PPU {
             scroll_y += 240;
         }
 
-        let xx: u32 = x as u32 + scroll_x as u32;
-        let yy: u32 = y as u32 + scroll_y as u32;
+        let xx: u32 = x as u32 + scroll_x;
+        let yy: u32 = y as u32 + scroll_y;
         let xx = xx % 512;
         let yy = yy % 480;
 
@@ -454,7 +528,6 @@ impl PPU {
         let pat_hi = self.mem[pat_addr_hi as usize];
         let pat = self.pattern_lut
             [(((pat_hi as usize) * 256 + (pat_lo as usize)) * 8 + (xx as usize) % 8) as usize];
-        let attribute_table_base: [usize; 4] = [0x23C0, 0x27C0, 0x2BC0, 0x2FC0];
         let (r, g, b) = self.get_color(nametable_id, u, v, pat);
 
         if pat != 0 {

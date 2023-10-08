@@ -146,6 +146,7 @@ impl NES {
 							cpu.nmi();
 						}
 						EventType::IRQ => {
+							//println!("IRQ!");
 							let mut cpu = self.cpu.borrow_mut();
 							cpu.irq();
 						}
